@@ -78,7 +78,11 @@ function App() {
           <LevelTest onDone={() => setShowLevelTest(false)} />
         ) : (
           <>
-            {activeTab === 'chat' && <Chat />}
+            {activeTab === 'chat' && <Chat
+              onUpgrade={() => setActiveTab('subscription')}
+              onStartReview={() => { setActiveTab('vocab'); setVocabInitialTab('review'); }}
+              onStartLevelTest={() => setShowLevelTest(true)}
+            />}
             {activeTab === 'vocab' && <Vocabulary initialTab={vocabInitialTab} />}
             {activeTab === 'progress' && <ProgressView onStartLevelTest={() => setShowLevelTest(true)} />}
             {activeTab === 'subscription' && <SubscriptionPlans />}

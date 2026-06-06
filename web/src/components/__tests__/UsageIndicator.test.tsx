@@ -8,6 +8,8 @@ vi.mock('react-i18next', () => ({
       if (key === 'chat.daily_limit') {
         return `Сегодня: ${vars?.used}/${vars?.total}`;
       }
+      if (key === 'chat.limit_exhausted') return 'Дневной лимит исчерпан';
+      if (key === 'chat.get_unlimited') return 'Получить безлимит';
       return key;
     },
   }),
@@ -22,5 +24,18 @@ describe('UsageIndicator', () => {
   it('shows Unlimited for premium users', () => {
     render(<UsageIndicator usage={{ daily_used: 0, daily_limit: 0, is_premium: true }} />);
     expect(screen.getByText('Unlimited')).toBeInTheDocument();
+  });
+
+  it('shows exhausted message and upgrade button when limit reached', () => {
+    render(<UsageIndicator usage={{ daily_used: 10, daily_limit: 10, is_premium: false }} />);
+    expect(screen.getByText('Дневной лимит исчерпан')).toBeInTheDocument();
+    expect(screen.getByText('Получить безлимит')).toBeInTheDocument();
+  });
+
+  it('calls onUpgrade when upgrade button is clicked', () => {
+    const onUpgrade = vi.fn();
+    render(<UsageIndicator usage={{ daily_used: 10, daily_limit: 10, is_premium: false }} onUpgrade={onUpgrade} />);
+    screen.getByText('Получить безлимит').click();
+    expect(onUpgrade).toHaveBeenCalledTimes(1);
   });
 });

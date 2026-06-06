@@ -391,7 +391,13 @@ RU: "👋 Привет! Я Lingvo AI — твой личный учитель а
 
 ### Screens
 
-- **Chat** — Message history, input, corrections display, limit indicator
+- **Chat** — Message history, input with streaming, corrections display, limit indicator
+  - Лимит не исчерпан: поле ввода + UsageIndicator (прогресс-бар)
+  - Лимит исчерпан (free): поле ввода скрывается, показывается панель альтернатив:
+    - 📚 Повторение слов (SM-2)
+    - 📊 Тест уровня
+    - ⭐ Получить безлимит (переход в Subscription)
+  - Premium: поле ввода + UsageIndicator (⭐ Unlimited)
 - **Vocabulary** — Word list with search, add word, review buttons
 - **Progress** — Level, streak, daily chart
 - **Subscription** — Plan comparison, subscribe buttons

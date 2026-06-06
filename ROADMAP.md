@@ -79,7 +79,7 @@
 - [x] Цены: 300 Stars/week, 800 Stars/month
 - [x] Обработка `successful_payment`
 - [x] Проверка подписки при каждом запросе
-- [ ] UI: кнопка "Get Unlimited" при лимите (показывается UsageIndicator)
+- [x] UI: кнопка "Get Unlimited" при лимите (показывается UsageIndicator)
 - [x] UI: страница "Subscription" с планами
 
 ### Premium Features

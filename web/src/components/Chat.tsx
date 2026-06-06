@@ -11,7 +11,13 @@ interface Message {
   corrections?: Correction[];
 }
 
-export function Chat() {
+interface ChatProps {
+  onUpgrade?: () => void;
+  onStartReview?: () => void;
+  onStartLevelTest?: () => void;
+}
+
+export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -116,42 +122,77 @@ export function Chat() {
         )}
       </div>
 
-      <UsageIndicator usage={usage} />
+      <UsageIndicator usage={usage} onUpgrade={onUpgrade} />
 
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: 'flex',
-          gap: 8,
-          padding: '8px 16px',
+      {usage.daily_used >= usage.daily_limit && !usage.is_premium ? (
+        <div style={{
+          padding: '16px',
           borderTop: '1px solid var(--tg-border)',
           background: 'var(--tg-bg)',
-        }}
-      >
-        <input
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder={t('chat.input_placeholder')}
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: 'var(--tg-text)' }}>
+            {t('chat.limit_alternatives')}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%', textAlign: 'left', padding: '10px 14px', fontSize: 14 }}
+              onClick={onStartReview}
+            >
+              📚 {t('vocab.review')}
+            </button>
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%', textAlign: 'left', padding: '10px 14px', fontSize: 14 }}
+              onClick={onStartLevelTest}
+            >
+              📊 {t('level.take_test')}
+            </button>
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%', padding: '10px 14px', fontSize: 14 }}
+              onClick={onUpgrade}
+            >
+              ⭐ {t('chat.get_unlimited')}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form
+          onSubmit={handleSubmit}
           style={{
-            flex: 1,
-            padding: '10px 14px',
-            border: '1px solid var(--tg-border)',
-            borderRadius: 10,
-            background: 'var(--tg-secondary-bg)',
-            color: 'var(--tg-text)',
-            fontSize: 15,
-            outline: 'none',
+            display: 'flex',
+            gap: 8,
+            padding: '8px 16px',
+            borderTop: '1px solid var(--tg-border)',
+            background: 'var(--tg-bg)',
           }}
-        />
-        <button
-          type="submit"
-          disabled={!input.trim() || isStreaming}
-          className="btn btn-primary"
-          style={{ padding: '10px 16px' }}
         >
-          {t('chat.send')}
-        </button>
-      </form>
+          <input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder={t('chat.input_placeholder')}
+            style={{
+              flex: 1,
+              padding: '10px 14px',
+              border: '1px solid var(--tg-border)',
+              borderRadius: 10,
+              background: 'var(--tg-secondary-bg)',
+              color: 'var(--tg-text)',
+              fontSize: 15,
+              outline: 'none',
+            }}
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || isStreaming}
+            className="btn btn-primary"
+            style={{ padding: '10px 16px' }}
+          >
+            {t('chat.send')}
+          </button>
+        </form>
+      )}
     </div>
   );
 }
