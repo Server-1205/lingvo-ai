@@ -10,17 +10,16 @@
 - **Стадия**: Core — Backend API + middleware работают
 - **Backend**: Go-сервер компилируется, эндпоинты работают (chat, subscription, invoice)
 - **Middleware**: Auth (HMAC-SHA256 initData), Ratelimit (10/day free, unlimited premium)
-- **Frontend**: Vite-шаблон, UI Lingvo не написан
-- **Бот**: Stub — только логирует старт
+- **Frontend**: UI написан (Chat, NavBar, Subscription, Vocabulary, Progress) — React 19, Vite 8, TS 6
+- **Бот**: Long-polling работает (/start, /help, /daily, successful_payment)
 - **AI**: Gemini-клиент реализован (gemini.go, prompts.go, response.go)
 - **БД**: Схема готова (5 таблиц), миграция работает, CRUD готов (users, messages, subscriptions)
 - **i18n**: Frontend uz.json + ru.json (31 ключ), Backend uz.json + ru.json (7 ключей)
 
 ## Текущий фокус
 
-- Telegram bot handlers (long-polling: /start, /help, /daily, successful_payment)
-- Frontend UI (Chat, Vocabulary, Progress, Subscription)
 - Дополнительные API-эндпоинты (grammar, vocab, quiz, level, progress)
+- Frontend UI (Vocabulary, Progress — подключить к реальным API)
 
 ## Архитектурные решения
 
@@ -42,3 +41,9 @@
 - `internal/api/chat.go` — POST /api/chat
 - `internal/api/subscription.go` — GET /api/subscription
 - `internal/api/invoice.go` — POST /api/create-invoice (Telegram Stars)
+- `internal/bot/bot.go` — long-polling loop
+- `internal/bot/handlers.go` — /start, /help, /daily, successful_payment
+- `web/src/components/Chat.tsx` — Chat screen
+- `web/src/components/NavBar.tsx` — Bottom navigation
+- `web/src/components/Subscription.tsx` — Subscription plans
+- `web/src/api/client.ts` — HTTP API client
