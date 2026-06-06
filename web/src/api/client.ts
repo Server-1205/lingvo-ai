@@ -48,6 +48,9 @@ export interface VocabWord {
   example: string;
   level: string;
   review_count: number;
+  ease_factor: number;
+  interval: number;
+  last_reviewed_at?: string | null;
   next_review: string | null;
   created_at: string;
 }
