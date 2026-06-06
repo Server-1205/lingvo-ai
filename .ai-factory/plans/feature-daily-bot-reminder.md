@@ -20,7 +20,7 @@
 
 ### Phase 1: Backend — DB + Bot
 
-**Task 1.1 — Add GetAllUsers and GetDueWordCount**
+**Task 1.1 — Add GetAllUsers and GetDueWordCount** ✅
 
 Files: `internal/db/users.go`, `internal/db/vocabulary.go`
 
