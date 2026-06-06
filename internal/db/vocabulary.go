@@ -38,3 +38,48 @@ func DeleteVocabulary(ctx context.Context, db *sqlx.DB, userID, wordID int) erro
 		"DELETE FROM vocabulary WHERE id = ? AND user_id = ?", wordID, userID)
 	return err
 }
+
+func GetDueWords(ctx context.Context, db *sqlx.DB, userID, limit int) ([]models.VocabWord, error) {
+	var words []models.VocabWord
+	err := db.SelectContext(ctx, &words, `
+		SELECT * FROM vocabulary
+		WHERE user_id = ?
+		  AND (next_review IS NULL OR next_review <= datetime('now'))
+		ORDER BY next_review ASC
+		LIMIT ?
+	`, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+	return words, nil
+}
+
+func UpdateReview(ctx context.Context, db *sqlx.DB, wordID, userID int, reviewCount, interval int, easeFactor float64, nextReview string) error {
+	tx, err := db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, `
+		UPDATE vocabulary
+		SET review_count = ?, interval = ?, ease_factor = ?,
+		    last_reviewed_at = datetime('now'), next_review = ?
+		WHERE id = ? AND user_id = ?
+	`, reviewCount, interval, easeFactor, nextReview, wordID, userID)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO daily_progress (user_id, date, words_learned)
+		VALUES (?, date('now'), 1)
+		ON CONFLICT(user_id, date) DO UPDATE SET
+			words_learned = words_learned + 1
+	`, userID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
