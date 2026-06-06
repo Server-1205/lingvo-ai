@@ -39,6 +39,28 @@ func IncrementProgress(ctx context.Context, db *sqlx.DB, userID int, date, field
 	return err
 }
 
+func GetProgressHistory(ctx context.Context, db *sqlx.DB, userID int, days int) ([]models.DailyProgressEntry, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT date, messages_sent, words_learned, quizzes_taken
+		FROM daily_progress
+		WHERE user_id = ? AND date >= date('now', '-' || ? || ' days')
+		ORDER BY date ASC`, userID, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []models.DailyProgressEntry
+	for rows.Next() {
+		var e models.DailyProgressEntry
+		if err := rows.Scan(&e.Date, &e.MessagesSent, &e.WordsLearned, &e.QuizzesTaken); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
+}
+
 func GetStreakDays(ctx context.Context, db *sqlx.DB, userID int) (int, error) {
 	rows, err := db.QueryContext(ctx, `
 		SELECT date FROM daily_progress

@@ -89,6 +89,17 @@ export interface ProgressResponse {
   level: string;
 }
 
+export interface DailyProgressEntry {
+  date: string;
+  messages_sent: number;
+  words_learned: number;
+  quizzes_taken: number;
+}
+
+export interface ProgressHistoryResponse {
+  entries: DailyProgressEntry[];
+}
+
 export interface QuizRequest {
   topic?: string;
   count?: number;
@@ -218,6 +229,10 @@ export async function checkGrammar(req: GrammarRequest): Promise<GrammarResponse
 
 export async function getProgress(): Promise<ProgressResponse> {
   return request<ProgressResponse>('/api/progress');
+}
+
+export async function getProgressHistory(days: number = 7): Promise<ProgressHistoryResponse> {
+  return request<ProgressHistoryResponse>(`/api/progress/history?days=${days}`);
 }
 
 export async function getQuiz(req: QuizRequest): Promise<QuizResponse> {

@@ -165,3 +165,14 @@ type ProgressResponse struct {
 	StreakDays   int    `json:"streak_days"`
 	Level        string `json:"level"`
 }
+
+type DailyProgressEntry struct {
+	Date         string `json:"date"`
+	MessagesSent int    `json:"messages_sent"`
+	WordsLearned int    `json:"words_learned"`
+	QuizzesTaken int    `json:"quizzes_taken"`
+}
+
+type ProgressHistoryResponse struct {
+	Entries []DailyProgressEntry `json:"entries"`
+}

@@ -49,6 +49,7 @@ func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, botToken string, suga
 		protected.POST("/level", levelTestHandler(db, aiClient, sugar))
 		protected.POST("/level/save", levelSaveHandler(db))
 		protected.GET("/progress", progressHandler(db))
+		protected.GET("/progress/history", progressHistoryHandler(db, sugar))
 		protected.GET("/subscription", subscriptionHandler(db))
 		protected.POST("/create-invoice", invoiceHandler(botToken, sugar))
 	}
