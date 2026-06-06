@@ -33,6 +33,26 @@ func (c *Client) Close() error {
 	return c.genClient.Close()
 }
 
+func (c *Client) Generate(ctx context.Context, prompt string) (string, error) {
+	resp, err := c.model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return "", err
+	}
+
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", nil
+	}
+
+	text := ""
+	for _, part := range resp.Candidates[0].Content.Parts {
+		if t, ok := part.(genai.Text); ok {
+			text += string(t)
+		}
+	}
+
+	return text, nil
+}
+
 func (c *Client) Chat(ctx context.Context, prompt string) (*models.AIResponse, error) {
 	resp, err := c.model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {

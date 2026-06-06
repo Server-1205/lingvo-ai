@@ -70,3 +70,84 @@ type ErrorResponse struct {
 	MessageUz  string `json:"message_uz,omitempty"`
 	MessageRu  string `json:"message_ru,omitempty"`
 }
+
+type GrammarRequest struct {
+	Text string `json:"text" binding:"required"`
+}
+
+type GrammarResponse struct {
+	Corrections []Correction `json:"corrections"`
+}
+
+type VocabLookupRequest struct {
+	Word string `json:"word" binding:"required"`
+}
+
+type VocabLookupResponse struct {
+	TranslationUz string   `json:"translation_uz"`
+	TranslationRu string   `json:"translation_ru"`
+	Examples      []string `json:"examples"`
+	Level         string   `json:"level"`
+}
+
+type VocabWord struct {
+	ID          int        `db:"id" json:"id"`
+	UserID      int        `db:"user_id" json:"user_id"`
+	Word        string     `db:"word" json:"word"`
+	Translation string     `db:"translation" json:"translation"`
+	Example     string     `db:"example" json:"example"`
+	Level       string     `db:"level" json:"level"`
+	ReviewCount int        `db:"review_count" json:"review_count"`
+	NextReview  *time.Time `db:"next_review" json:"next_review,omitempty"`
+	CreatedAt   time.Time  `db:"created_at" json:"created_at"`
+}
+
+type AddVocabRequest struct {
+	Word        string `json:"word" binding:"required"`
+	Translation string `json:"translation" binding:"required"`
+	Example     string `json:"example" binding:"required"`
+	Level       string `json:"level"`
+}
+
+type QuizRequest struct {
+	Topic string `json:"topic"`
+	Count int    `json:"count"`
+}
+
+type QuizQuestion struct {
+	Question      string   `json:"question"`
+	Options       []string `json:"options"`
+	Correct       int      `json:"correct"`
+	ExplanationUz string   `json:"explanation_uz"`
+	ExplanationRu string   `json:"explanation_ru"`
+}
+
+type QuizResponse struct {
+	Questions []QuizQuestion `json:"questions"`
+}
+
+type LevelRequest struct {
+	Text string `json:"text"`
+}
+
+type LevelQuestion struct {
+	Question      string   `json:"question"`
+	Options       []string `json:"options"`
+	Correct       int      `json:"correct"`
+	Level         string   `json:"level"`
+	ExplanationUz string   `json:"explanation_uz"`
+	ExplanationRu string   `json:"explanation_ru"`
+}
+
+type LevelResponse struct {
+	Questions []LevelQuestion `json:"questions"`
+	Level     string          `json:"level,omitempty"`
+}
+
+type ProgressResponse struct {
+	MessagesSent int    `json:"messages_sent"`
+	WordsLearned int    `json:"words_learned"`
+	QuizzesTaken int    `json:"quizzes_taken"`
+	StreakDays   int    `json:"streak_days"`
+	Level        string `json:"level"`
+}
