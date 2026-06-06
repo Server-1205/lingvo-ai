@@ -1,13 +1,19 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getVocab, addVocab, deleteVocab, lookupVocab } from '../api/client';
+import { getVocab, addVocab, deleteVocab, lookupVocab, getDueWords, submitReview } from '../api/client';
 import type { VocabWord, VocabLookupResponse } from '../api/client';
+import { ReviewCard } from './ReviewCard';
 
-export function Vocabulary() {
+interface VocabularyProps {
+  initialTab?: 'my' | 'lookup' | 'review';
+}
+
+export function Vocabulary({ initialTab }: VocabularyProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<'my' | 'lookup'>('my');
+  const [tab, setTab] = useState<'my' | 'lookup' | 'review'>(initialTab || 'my');
+  const [reviewIndex, setReviewIndex] = useState(0);
   const [lookupWord, setLookupWord] = useState('');
   const [showAdd, setShowAdd] = useState<VocabLookupResponse | null>(null);
   const [addWord, setAddWord] = useState('');
@@ -48,7 +54,21 @@ export function Vocabulary() {
     },
   });
 
+  const { data: dueWords } = useQuery({
+    queryKey: ['vocab-review'],
+    queryFn: () => getDueWords(20),
+    staleTime: 15000,
+  });
+
+  const reviewMutation = useMutation({
+    mutationFn: ({ wordId, quality }: { wordId: number; quality: number }) => submitReview(wordId, quality),
+    onSuccess: () => {
+      setReviewIndex((i) => i + 1);
+    },
+  });
+
   const list = words ?? [];
+  const dueList = dueWords ?? [];
 
   return (
     <div className="scroll-area">
@@ -75,6 +95,22 @@ export function Vocabulary() {
           onClick={() => setTab('lookup')}
         >
           {t('vocab.lookup_tab')}
+        </button>
+        <button
+          className={`btn ${tab === 'review' ? 'btn-primary' : ''}`}
+          style={{ flex: 1, padding: '8px 0', fontSize: 13, position: 'relative' }}
+          onClick={() => { setTab('review'); setReviewIndex(0); }}
+        >
+          {t('vocab.review')}
+          {dueList.length > 0 && tab !== 'review' && (
+            <span style={{
+              position: 'absolute', top: -4, right: -4,
+              background: 'var(--tg-destructive)', color: '#fff',
+              fontSize: 10, padding: '1px 5px', borderRadius: 8, fontWeight: 600,
+            }}>
+              {dueList.length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -119,6 +155,49 @@ export function Vocabulary() {
               </div>
             </div>
           ))}
+        </>
+      )}
+
+      {tab === 'review' && (
+        <>
+          {dueList.length === 0 && (
+            <div className="placeholder">
+              <div className="placeholder-icon">🃏</div>
+              <div>{t('vocab.review_empty')}</div>
+            </div>
+          )}
+
+          {dueList.length > 0 && reviewIndex >= dueList.length && (
+            <div className="placeholder">
+              <div className="placeholder-icon">🎉</div>
+              <div>{t('vocab.review_done')}</div>
+              <button
+                className="btn btn-primary"
+                style={{ marginTop: 12 }}
+                onClick={() => {
+                  setReviewIndex(0);
+                  queryClient.invalidateQueries({ queryKey: ['vocab-review'] });
+                  queryClient.invalidateQueries({ queryKey: ['vocab'] });
+                }}
+              >
+                {t('common.retry')}
+              </button>
+            </div>
+          )}
+
+          {dueList.length > 0 && reviewIndex < dueList.length && (
+            <div>
+              <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--tg-hint)', padding: '8px 0' }}>
+                {t('vocab.review_progress', { current: reviewIndex + 1, total: dueList.length })}
+              </div>
+              <ReviewCard
+                word={dueList[reviewIndex]}
+                onRate={(quality) => {
+                  reviewMutation.mutate({ wordId: dueList[reviewIndex].id, quality });
+                }}
+              />
+            </div>
+          )}
         </>
       )}
 

@@ -48,6 +48,9 @@ export interface VocabWord {
   example: string;
   level: string;
   review_count: number;
+  ease_factor: number;
+  interval: number;
+  last_reviewed_at?: string | null;
   next_review: string | null;
   created_at: string;
 }
@@ -316,6 +319,36 @@ export async function chatStream(
       }
     }
   }
+}
+
+export async function getLevelTestQuestions(): Promise<LevelResponse> {
+  return request<LevelResponse>('/api/level', {
+    method: 'POST',
+    body: '{}',
+  });
+}
+
+export const ReviewQuality = {
+  Again: 0,
+  Hard: 2,
+  Good: 4,
+  Easy: 5,
+} as const;
+
+export interface ReviewResponse {
+  next_review: string;
+}
+
+export async function getDueWords(limit?: number): Promise<VocabWord[]> {
+  const params = limit ? `?limit=${limit}` : '';
+  return request<VocabWord[]>('/api/vocab/review' + params);
+}
+
+export async function submitReview(wordId: number, quality: number): Promise<ReviewResponse> {
+  return request<ReviewResponse>(`/api/vocab/review/${wordId}`, {
+    method: 'POST',
+    body: JSON.stringify({ quality }),
+  });
 }
 
 export { ApiError };

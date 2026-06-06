@@ -91,15 +91,18 @@ type VocabLookupResponse struct {
 }
 
 type VocabWord struct {
-	ID          int        `db:"id" json:"id"`
-	UserID      int        `db:"user_id" json:"user_id"`
-	Word        string     `db:"word" json:"word"`
-	Translation string     `db:"translation" json:"translation"`
-	Example     string     `db:"example" json:"example"`
-	Level       string     `db:"level" json:"level"`
-	ReviewCount int        `db:"review_count" json:"review_count"`
-	NextReview  *time.Time `db:"next_review" json:"next_review,omitempty"`
-	CreatedAt   time.Time  `db:"created_at" json:"created_at"`
+	ID            int        `db:"id" json:"id"`
+	UserID        int        `db:"user_id" json:"user_id"`
+	Word          string     `db:"word" json:"word"`
+	Translation   string     `db:"translation" json:"translation"`
+	Example       string     `db:"example" json:"example"`
+	Level         string     `db:"level" json:"level"`
+	ReviewCount   int        `db:"review_count" json:"review_count"`
+	EaseFactor    float64    `db:"ease_factor" json:"ease_factor"`
+	Interval      int        `db:"interval" json:"interval"`
+	LastReviewedAt *time.Time `db:"last_reviewed_at" json:"last_reviewed_at,omitempty"`
+	NextReview    *time.Time `db:"next_review" json:"next_review,omitempty"`
+	CreatedAt     time.Time  `db:"created_at" json:"created_at"`
 }
 
 type AddVocabRequest struct {

@@ -2,7 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { getProgress } from '../api/client';
 
-export function ProgressView() {
+interface ProgressViewProps {
+  onStartLevelTest?: () => void;
+}
+
+export function ProgressView({ onStartLevelTest }: ProgressViewProps) {
   const { t } = useTranslation();
 
   const { data: progress, isLoading } = useQuery({
@@ -48,6 +52,18 @@ export function ProgressView() {
             </div>
             <div style={{ fontSize: 12, color: 'var(--tg-hint)', marginTop: 4 }}>{t('progress.streak')}</div>
           </div>
+        </div>
+      )}
+
+      {!isLoading && (
+        <div style={{ padding: '16px' }}>
+          <button
+            className="btn btn-primary"
+            style={{ width: '100%', padding: 12 }}
+            onClick={onStartLevelTest}
+          >
+            {t('level.take_test')}
+          </button>
         </div>
       )}
     </div>

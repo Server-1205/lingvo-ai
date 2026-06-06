@@ -119,16 +119,59 @@ func handleDaily(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogg
 		return
 	}
 
-	text := fmt.Sprintf("📅 *Bugungi dars / Урок дня*\n\n"+
-		"Daraja / Уровень: *%s*\n\n"+
-		"Mini App ni oching va AI bilan suhbatlashing yoki lug'at bilan ishlang.\n\n"+
-		"Открой Mini App и общайся с AI или работай со словарём.", strings.ToUpper(user.Level))
+	dueCount, err := db.GetDueWordCount(context.Background(), database, user.ID)
+	if err != nil {
+		sugar.Errorw("get due count for daily", "error", err, "user_id", user.ID)
+		dueCount = 0
+	}
 
-	msg := tgbotapi.NewMessage(chatID, text)
-	msg.ParseMode = "Markdown"
-	msg.ReplyMarkup = launchKeyboard(chatID, lang)
-	if _, err := bot.Send(msg); err != nil {
-		sugar.Errorw("send daily message", "error", err)
+	sugar.Debugw("daily check", "user_id", user.ID, "due", dueCount)
+
+	var msgText string
+	if dueCount > 0 {
+		dueMsgs := map[string]string{
+			"uz": fmt.Sprintf("📅 *Bugungi dars*\n\n"+
+				"Daraja: *%s*\n"+
+				"📚 Takrorlash uchun *%d* ta so'z bor.\n\n"+
+				"Quyidagi tugma orqali boshlang:", strings.ToUpper(user.Level), dueCount),
+			"ru": fmt.Sprintf("📅 *Урок дня*\n\n"+
+				"Уровень: *%s*\n"+
+				"📚 Слов для повторения: *%d*\n\n"+
+				"Начните прямо сейчас:", strings.ToUpper(user.Level), dueCount),
+		}
+		msgText = dueMsgs["uz"]
+		if m, ok := dueMsgs[lang]; ok {
+			msgText = m
+		}
+
+		msg := tgbotapi.NewMessage(chatID, msgText)
+		msg.ParseMode = "Markdown"
+		msg.ReplyMarkup = reviewButton(lang)
+		if _, err := bot.Send(msg); err != nil {
+			sugar.Errorw("send daily message with review", "error", err)
+		}
+	} else {
+		emptyMsgs := map[string]string{
+			"uz": fmt.Sprintf("📅 *Bugungi dars*\n\n"+
+				"Daraja: *%s*\n\n"+
+				"✅ Takrorlash uchun so'z yo'q. Yangi so'zlar qo'shing yoki AI bilan suhbatlashing.\n\n"+
+				"Mini App ni oching:", strings.ToUpper(user.Level)),
+			"ru": fmt.Sprintf("📅 *Урок дня*\n\n"+
+				"Уровень: *%s*\n\n"+
+				"✅ Нет слов для повторения. Добавьте новые слова или пообщайтесь с AI.\n\n"+
+				"Откройте Mini App:", strings.ToUpper(user.Level)),
+		}
+		msgText = emptyMsgs["uz"]
+		if m, ok := emptyMsgs[lang]; ok {
+			msgText = m
+		}
+
+		msg := tgbotapi.NewMessage(chatID, msgText)
+		msg.ParseMode = "Markdown"
+		msg.ReplyMarkup = launchKeyboard(chatID, lang)
+		if _, err := bot.Send(msg); err != nil {
+			sugar.Errorw("send daily message", "error", err)
+		}
 	}
 }
 

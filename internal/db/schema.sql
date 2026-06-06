@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS vocabulary (
     example       TEXT NOT NULL,
     level         TEXT DEFAULT 'a1',
     review_count  INTEGER DEFAULT 0,
+    ease_factor   REAL DEFAULT 2.5,
+    interval      INTEGER DEFAULT 0,
+    last_reviewed_at DATETIME,
     next_review   DATETIME,
     created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, word)
@@ -55,3 +58,8 @@ CREATE TABLE IF NOT EXISTS daily_progress (
 CREATE INDEX IF NOT EXISTS idx_messages_user_date ON messages(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_vocab_user ON vocabulary(user_id);
 CREATE INDEX IF NOT EXISTS idx_progress_user_date ON daily_progress(user_id, date);
+
+-- Migrations for existing databases
+ALTER TABLE vocabulary ADD COLUMN ease_factor REAL DEFAULT 2.5;
+ALTER TABLE vocabulary ADD COLUMN interval INTEGER DEFAULT 0;
+ALTER TABLE vocabulary ADD COLUMN last_reviewed_at DATETIME;

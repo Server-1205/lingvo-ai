@@ -74,11 +74,23 @@ func main() {
 	// Init router
 	r := gin.Default()
 
-	// API routes
+	// API routes (includes /api/health)
 	api.RegisterRoutes(r, database, geminiKey, botToken, sugar)
 
-	// Serve frontend (SPA — index.html for all non-API routes)
+	// No-cache middleware for frontend assets
+	r.Use(func(c *gin.Context) {
+		if !c.IsAborted() {
+			c.Header("Cache-Control", "no-store")
+		}
+		c.Next()
+	})
+
+	// Serve static frontend files
 	r.Static("/assets", "./web/dist/assets")
+	r.StaticFile("/favicon.svg", "./web/dist/favicon.svg")
+	r.StaticFile("/icons.svg", "./web/dist/icons.svg")
+
+	// SPA fallback — serve index.html for all unmatched routes
 	r.NoRoute(func(c *gin.Context) {
 		c.File("./web/dist/index.html")
 	})

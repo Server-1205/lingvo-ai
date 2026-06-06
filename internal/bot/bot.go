@@ -26,6 +26,8 @@ func Start(database *sqlx.DB, botToken string, sugar *zap.SugaredLogger) {
 
 	sugar.Infow("bot started", "username", bot.Self.UserName)
 
+	go StartReminderScheduler(bot, database, sugar)
+
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	u.AllowedUpdates = []string{"message", "callback_query"}
