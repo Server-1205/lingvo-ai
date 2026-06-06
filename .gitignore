@@ -1,0 +1,28 @@
+# Go
+/server
+*.exe
+*.test
+*.out
+tmp/
+
+# Node
+node_modules/
+web/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Env
+.env
+
+# Database
+/data/
+*.db
+*.db-journal
+*.db-wal
+
+# OS
+.DS_Store
+Thumbs.db

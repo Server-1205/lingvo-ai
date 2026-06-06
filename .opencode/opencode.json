@@ -1,0 +1,48 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md", ".opencode/memory/context.md"],
+
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp"],
+      "enabled": true
+    },
+    "sqlite": {
+      "type": "local",
+      "command": ["npx", "-y", "@joshmossas/sqlite-mcp", "--dbPath", "lingvo.db"],
+      "enabled": true,
+      "env": {
+        "SQLITE_DB_PATH": "lingvo.db"
+      }
+    },
+    "sequential-thinking": {
+      "type": "local",
+      "command": ["npx", "-y", "@stdlib/sequential-thinking-mcp"],
+      "enabled": true
+    }
+  },
+
+  "skills": {
+    "paths": [".opencode/skills"]
+  },
+
+  "permission": {
+    "edit": "allow",
+    "bash": "ask",
+    "external_directory": {
+      "/home/asdev/projects/sinking/**": "allow",
+      "*": "ask"
+    }
+  },
+
+  "experimental": {
+    "primary_tools": ["edit", "read", "glob", "grep", "bash", "task"],
+    "mcp_timeout": 60000
+  },
+
+  "compaction": {
+    "auto": true,
+    "tail_turns": 20
+  }
+}

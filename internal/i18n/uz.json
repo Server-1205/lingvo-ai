@@ -1,0 +1,9 @@
+{
+  "limit_exceeded": "Бугунги лимит тугади. Чексизга обуна бўлинг!",
+  "welcome": "👋 Салом! Men Lingvo AI — sizning shaxsiy ingliz tili o'qituvchingiz.",
+  "help": "📚 *Lingvo AI — ёрдам*\n\n/start — Бошлаш\n/daily — Бугунги дарс\n/help — Ёрдам\n\nШунингдек, Mini App орқали сўз бойлигингизни оширинг ва AI билан суҳбатлашинг.",
+  "subscription_active": "✅ Обунангиз фаол. {plan} — {expires} гача амал қилади.",
+  "subscription_expired": "Обунангиз тугаган. Чексизга обуна бўлинг!",
+  "daily_title": "📅 *Бугунги дарс*\n\nДаража: {level}\n\n{lesson}",
+  "start_button": "🚀 Lingvo AI ни ишга тушириш"
+}
