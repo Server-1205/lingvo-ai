@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+
+	"github.com/lingvo-ai/lingvo/internal/models"
 )
 
 func GetDailyProgress(ctx context.Context, db *sqlx.DB, userID int, date string) (map[string]int, error) {
@@ -62,4 +64,45 @@ func GetStreakDays(ctx context.Context, db *sqlx.DB, userID int) (int, error) {
 		expected = parsed.AddDate(0, 0, -1).Format("2006-01-02")
 	}
 	return streak, nil
+}
+
+func GetUserStats(ctx context.Context, db *sqlx.DB, userID int) (*models.UserStats, error) {
+	var user models.User
+	err := db.GetContext(ctx, &user, "SELECT * FROM users WHERE id = ?", userID)
+	if err != nil {
+		return nil, nil
+	}
+
+	var totalMessages int
+	_ = db.GetContext(ctx, &totalMessages,
+		"SELECT COALESCE(SUM(count), 0) FROM messages WHERE user_id = ?", userID)
+
+	var totalWords int
+	_ = db.GetContext(ctx, &totalWords,
+		"SELECT COUNT(*) FROM vocabulary WHERE user_id = ?", userID)
+
+	var wordsDueToday int
+	_ = db.GetContext(ctx, &wordsDueToday,
+		`SELECT COUNT(*) FROM vocabulary WHERE user_id = ?
+		 AND (next_review IS NULL OR next_review <= datetime('now'))`, userID)
+
+	streak, _ := GetStreakDays(ctx, db, userID)
+
+	sub, _ := GetActiveSubscription(ctx, db, userID)
+	isPremium := sub != nil
+	subExpiry := ""
+	if sub != nil {
+		subExpiry = sub.ExpiresAt.Format("2006-01-02")
+	}
+
+	return &models.UserStats{
+		Level:              user.Level,
+		TotalMessages:      totalMessages,
+		TotalWords:         totalWords,
+		WordsDueToday:      wordsDueToday,
+		StreakDays:         streak,
+		IsPremium:          isPremium,
+		AccountCreatedAt:   user.CreatedAt.Format("2006-01-02"),
+		SubscriptionExpiry: subExpiry,
+	}, nil
 }

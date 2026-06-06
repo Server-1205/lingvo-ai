@@ -144,6 +144,17 @@ type LevelResponse struct {
 	Level     string          `json:"level,omitempty"`
 }
 
+type UserStats struct {
+	Level              string `json:"level"`
+	TotalMessages      int    `json:"total_messages"`
+	TotalWords         int    `json:"total_words"`
+	WordsDueToday      int    `json:"words_due_today"`
+	StreakDays         int    `json:"streak_days"`
+	IsPremium          bool   `json:"is_premium"`
+	AccountCreatedAt   string `json:"account_created_at"`
+	SubscriptionExpiry string `json:"subscription_expiry,omitempty"`
+}
+
 type ProgressResponse struct {
 	MessagesSent int    `json:"messages_sent"`
 	WordsLearned int    `json:"words_learned"`
