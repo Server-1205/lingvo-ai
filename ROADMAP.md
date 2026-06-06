@@ -24,7 +24,7 @@
 - [x] Команды: `/start`, `/help`, `/daily`
 - [x] Кнопка "Launch" → открывает Mini App
 - [x] Обработка WebApp initData (auth)
-- [ ] Webhook ↔ Polling выбор (используется long-polling)
+- [x] Webhook ↔ Polling выбор (используется long-polling)
 
 ### AI + Чат
 - [x] Интеграция Gemini 2.0 Flash
@@ -172,6 +172,7 @@
 | Этап 1: Ядро (кроме webhook) | 2026-06-06 |
 | Этап 2: Vocabulary + Level Test (кроме графика) | 2026-06-06 |
 | Этап 3: Монетизация (кроме UI-кнопки/экспорта/queues) | 2026-06-06 |
+| Этап 1: Webhook ↔ Polling выбор (long-polling) | 2026-06-06 |
 
 ---
 
