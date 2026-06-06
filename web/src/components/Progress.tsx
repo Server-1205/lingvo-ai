@@ -1,6 +1,8 @@
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { getProgress } from '../api/client';
+import { getProgress, getProgressHistory } from '../api/client';
+import { ProgressChart } from './ProgressChart';
 
 interface ProgressViewProps {
   onStartLevelTest?: () => void;
@@ -14,6 +16,18 @@ export function ProgressView({ onStartLevelTest }: ProgressViewProps) {
     queryFn: getProgress,
     refetchInterval: 30_000,
   });
+
+  const [period, setPeriod] = useState(7);
+
+  const { data: history } = useQuery({
+    queryKey: ['progress-history', period],
+    queryFn: () => getProgressHistory(period),
+  });
+
+  console.debug('[progress] chart mounted, period=' + period);
+  if (history) {
+    console.debug('[progress] history loaded', history.entries.length, 'entries');
+  }
 
   return (
     <div className="scroll-area">
@@ -53,6 +67,16 @@ export function ProgressView({ onStartLevelTest }: ProgressViewProps) {
             <div style={{ fontSize: 12, color: 'var(--tg-hint)', marginTop: 4 }}>{t('progress.streak')}</div>
           </div>
         </div>
+      )}
+
+      {history && (
+        <ProgressChart
+          data={history.entries}
+          onPeriodChange={(d) => {
+            console.debug('[progress] chart updated to period=' + d);
+            setPeriod(d);
+          }}
+        />
       )}
 
       {!isLoading && (

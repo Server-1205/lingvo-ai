@@ -157,6 +157,44 @@ func TestGetUserStats_NoData(t *testing.T) {
 	}
 }
 
+func TestGetProgressHistory(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	_, err := db.ExecContext(ctx,
+		`INSERT INTO users (id, telegram_id, username, lang) VALUES (1, 12345, 'testuser', 'uz')`)
+	if err != nil {
+		t.Fatalf("insert user: %v", err)
+	}
+
+	db.MustExecContext(ctx,
+		`INSERT INTO daily_progress (user_id, date, messages_sent, words_learned, quizzes_taken)
+		 VALUES (1, date('now', '-1 days'), 5, 2, 1)`)
+	db.MustExecContext(ctx,
+		`INSERT INTO daily_progress (user_id, date, messages_sent, words_learned, quizzes_taken)
+		 VALUES (1, date('now', '-2 days'), 3, 1, 0)`)
+	db.MustExecContext(ctx,
+		`INSERT INTO daily_progress (user_id, date, messages_sent, words_learned, quizzes_taken)
+		 VALUES (1, date('now', '-10 days'), 10, 4, 2)`)
+
+	entries, err := GetProgressHistory(ctx, db, 1, 7)
+	if err != nil {
+		t.Fatalf("GetProgressHistory returned error: %v", err)
+	}
+
+	if len(entries) != 2 {
+		t.Errorf("expected 2 entries in last 7 days, got %d", len(entries))
+	}
+
+	if len(entries) > 0 {
+		last := entries[len(entries)-1]
+		if last.MessagesSent != 5 {
+			t.Errorf("expected 5 messages on latest day, got %d", last.MessagesSent)
+		}
+	}
+}
+
 func TestGetUserStats_NonExistentUser(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
