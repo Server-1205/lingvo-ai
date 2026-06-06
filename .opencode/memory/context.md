@@ -8,17 +8,18 @@
 ## Состояние проекта
 
 - **Стадия**: Core — Backend API + middleware работают
-- **Backend**: Go-сервер компилируется, 12 эндпоинтов работают (chat, grammar, vocab CRUD, vocab lookup, quiz, level test, level save, progress, subscription, invoice)
+- **Backend**: Go-сервер компилируется, 14 эндпоинтов (chat, grammar, vocab CRUD, vocab lookup, vocab review GET/POST, quiz, level test, level save, progress, subscription, invoice)
 - **Middleware**: Auth (HMAC-SHA256 initData), Ratelimit (10/day free, unlimited premium)
-- **Frontend**: UI написан (Chat, NavBar, Subscription, Vocabulary, Progress) — React 19, Vite 8, TS 6
+- **Frontend**: UI написан (Chat, NavBar, Subscription, Vocabulary, Progress, LevelTest, ReviewCard) — React 19, Vite 8, TS 6
 - **Бот**: Long-polling работает (/start, /help, /daily, successful_payment)
-- **AI**: Gemini-клиент реализован (gemini.go, prompts.go, response.go)
-- **БД**: Схема готова (5 таблиц), миграция работает, CRUD готов (users, messages, subscriptions)
-- **i18n**: Frontend uz.json + ru.json (31 ключ), Backend uz.json + ru.json (7 ключей)
+- **AI**: Gemini-клиент + SM-2 алгоритм (sm2.go, prompts.go, response.go)
+- **БД**: Схема готова (5 таблиц + SM-2 колонки), миграция работает, CRUD готов (users, messages, subscriptions, vocabulary, progress)
+- **i18n**: Frontend uz.json + ru.json (52 ключа), Backend uz.json + ru.json (7 ключей)
+- **SM-2 Spaced Repetition**: ✅ Полностью реализован (алгоритм + API + UI + тесты)
 
 ## Текущий фокус
 
-- (none — все компоненты подключены к API)
+- (none — SM-2 завершён, все компоненты подключены к API)
 
 ## Архитектурные решения
 
@@ -36,6 +37,7 @@
 - `internal/middleware/auth.go` — HMAC initData verification
 - `internal/middleware/ratelimit.go` — daily limit check
 - `internal/ai/gemini.go` — Gemini client wrapper
+- `internal/ai/sm2.go` — SM-2 algorithm
 - `internal/ai/prompts.go` — промпты для всех эндпоинтов
 - `internal/api/chat.go` — POST /api/chat
 - `internal/api/subscription.go` — GET /api/subscription
