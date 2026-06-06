@@ -1,25 +1,31 @@
 import { useEffect, useState } from 'react';
 import { initData, themeParams } from '@telegram-apps/sdk';
-import type { User, ThemeParams } from '@telegram-apps/types';
 
 export interface TelegramContext {
-  user: User | null;
+  user: { id: number; first_name: string } | null;
   initDataRaw: string;
-  theme: ThemeParams | null;
+  theme: Record<string, string> | null;
   isReady: boolean;
 }
 
 export function useTelegram(): TelegramContext {
-  const [theme, setTheme] = useState<ThemeParams | null>(null);
+  const [theme, setTheme] = useState<Record<string, string> | null>(null);
 
   useEffect(() => {
-    themeParams.mount().then(() => {
-      setTheme(themeParams.state());
-    });
+    try {
+      themeParams.mount().then(() => {
+        setTheme(themeParams.state() as Record<string, string>);
+      });
+    } catch {
+      console.debug('[tg] themeParams.mount() not available');
+    }
   }, []);
 
+  const rawUser = initData.user();
+  const user = rawUser ? { id: rawUser.id, first_name: rawUser.first_name ?? '' } : null;
+
   return {
-    user: initData.user() ?? null,
+    user,
     initDataRaw: initData.raw() ?? '',
     theme,
     isReady: true,

@@ -25,12 +25,16 @@ type telegramUser struct {
 func AuthMiddleware(botToken string, database *sqlx.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		initData := c.GetHeader("X-Telegram-Init-Data")
+
+		var tgUser *telegramUser
+		var err error
+
 		if initData == "" {
 			c.AbortWithStatusJSON(401, gin.H{"error": "unauthorized", "message": "Missing init data"})
 			return
 		}
 
-		tgUser, err := verifyInitData(initData, botToken)
+		tgUser, err = verifyInitData(initData, botToken)
 		if err != nil {
 			c.AbortWithStatusJSON(401, gin.H{"error": "unauthorized", "message": "Invalid init data"})
 			return

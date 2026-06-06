@@ -1,9 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"log"
-	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -16,7 +17,34 @@ import (
 	"github.com/lingvo-ai/lingvo/internal/db"
 )
 
+func loadEnv(path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+		if os.Getenv(key) == "" {
+			os.Setenv(key, val)
+		}
+	}
+}
+
 func main() {
+	loadEnv(".env")
+
 	// Logger
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
@@ -46,16 +74,14 @@ func main() {
 	// Init router
 	r := gin.Default()
 
-	// Health
-	r.GET("/api/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
-
-	// Serve frontend
-	r.StaticFS("/", http.Dir("./web/dist"))
-
 	// API routes
 	api.RegisterRoutes(r, database, geminiKey, botToken, sugar)
+
+	// Serve frontend (SPA — index.html for all non-API routes)
+	r.Static("/assets", "./web/dist/assets")
+	r.NoRoute(func(c *gin.Context) {
+		c.File("./web/dist/index.html")
+	})
 
 	// Start bot (long-polling, blocking in goroutine)
 	if botToken != "" {

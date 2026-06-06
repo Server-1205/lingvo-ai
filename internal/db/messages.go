@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -11,6 +12,9 @@ func GetMessageCount(ctx context.Context, db *sqlx.DB, userID int, date string) 
 	err := db.GetContext(ctx, &count,
 		"SELECT COALESCE(count, 0) FROM messages WHERE user_id = ? AND date = ?",
 		userID, date)
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
 	if err != nil {
 		return 0, err
 	}

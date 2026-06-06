@@ -15,6 +15,11 @@ import (
 
 func chatHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if aiClient == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai_service_unavailable"})
+			return
+		}
+
 		var req models.ChatRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})

@@ -12,9 +12,16 @@ import (
 )
 
 func Start(database *sqlx.DB, botToken string, sugar *zap.SugaredLogger) {
+	defer func() {
+		if r := recover(); r != nil {
+			sugar.Errorw("bot Start panic", "recover", r)
+		}
+	}()
+
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
-		sugar.Fatalw("bot init", "error", err)
+		sugar.Errorw("bot init failed", "error", err)
+		return
 	}
 
 	sugar.Infow("bot started", "username", bot.Self.UserName)
@@ -47,9 +54,17 @@ func Start(database *sqlx.DB, botToken string, sugar *zap.SugaredLogger) {
 }
 
 func processUpdate(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger, update tgbotapi.Update) {
+	defer func() {
+		if r := recover(); r != nil {
+			sugar.Errorw("bot panic recovered", "recover", r, "update_id", update.UpdateID)
+		}
+	}()
+
 	if update.Message == nil {
 		return
 	}
+
+	sugar.Debugw("bot message", "text", update.Message.Text, "from", update.Message.From.ID, "update_id", update.UpdateID)
 
 	if update.Message.SuccessfulPayment != nil {
 		handlePayment(bot, database, sugar, update)
