@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/lingvo-ai/lingvo/internal/db"
+	"github.com/lingvo-ai/lingvo/internal/models"
 )
 
 var durationMap = map[string]string{
@@ -45,11 +46,13 @@ func helpText(lang string) string {
 		"uz": "📚 *Lingvo AI — ёрдам*\n\n" +
 			"/start — Бошлаш\n" +
 			"/daily — Бугунги дарс\n" +
+			"/stats — Статистика\n" +
 			"/help — Ёрдам\n\n" +
 			"Шунингдек, Mini App орқали сўз бойлигингизни оширинг ва AI билан суҳбатлашинг.",
 		"ru": "📚 *Lingvo AI — помощь*\n\n" +
 			"/start — Начать\n" +
 			"/daily — Урок дня\n" +
+			"/stats — Статистика\n" +
 			"/help — Помощь\n\n" +
 			"Используй Mini App для пополнения словарного запаса и общения с AI.",
 	}
@@ -102,6 +105,9 @@ func handleCommand(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLo
 
 	case "daily":
 		handleDaily(bot, database, sugar, chatID, telegramID, lang)
+
+	case "stats":
+		handleStats(bot, database, sugar, chatID, telegramID, lang)
 
 	default:
 		msg := tgbotapi.NewMessage(chatID, "Unknown command. /help")
@@ -225,6 +231,80 @@ func handlePayment(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLo
 	if _, err := bot.Send(msg); err != nil {
 		sugar.Errorw("send payment confirmation", "error", err)
 	}
+}
+
+func formatStatsMessage(stats *models.UserStats, lang string, daysActive int) string {
+	premiumStatus := "❌ Yo'q / Нет"
+	if stats.IsPremium {
+		premiumStatus = fmt.Sprintf("✅ %s", stats.SubscriptionExpiry)
+	}
+
+	if lang == "ru" {
+		return fmt.Sprintf(
+			"📊 *Статистика*\n\n"+
+				"🎯 Уровень: *%s*\n"+
+				"💬 Всего сообщений: *%d*\n"+
+				"📚 Слов в словаре: *%d*\n"+
+				"📝 На повторении сегодня: *%d*\n"+
+				"🔥 Streak: *%d дней*\n"+
+				"👤 Аккаунту: *%d дней*\n"+
+				"⭐ Подписка: *%s*\n",
+			stats.Level, stats.TotalMessages, stats.TotalWords,
+			stats.WordsDueToday, stats.StreakDays, daysActive, premiumStatus)
+	}
+
+	return fmt.Sprintf(
+		"📊 *Statistika*\n\n"+
+			"🎯 Daraja: *%s*\n"+
+			"💬 Jami xabarlar: *%d*\n"+
+			"📚 Lug'atdagi so'zlar: *%d*\n"+
+			"📝 Bugungi takrorlash: *%d*\n"+
+			"🔥 Streak: *%d kun*\n"+
+			"👤 Akkount: *%d kun*\n"+
+			"⭐ Obuna: *%s*\n",
+		stats.Level, stats.TotalMessages, stats.TotalWords,
+		stats.WordsDueToday, stats.StreakDays, daysActive, premiumStatus)
+}
+
+func handleStats(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger, chatID int64, telegramID int64, lang string) {
+	sugar.Debugw("bot: /stats", "telegram_id", telegramID)
+
+	ctx := context.Background()
+
+	user, err := db.GetUserByTelegramID(ctx, database, telegramID)
+	if err != nil {
+		sugar.Errorw("bot: /stats — get user failed", "telegram_id", telegramID, "error", err)
+		sendMessage(bot, chatID, "Xatolik yuz berdi. / Ошибка.")
+		return
+	}
+
+	stats, err := db.GetUserStats(ctx, database, user.ID)
+	if err != nil {
+		sugar.Errorw("bot: /stats — get stats failed", "user_id", user.ID, "error", err)
+		sendMessage(bot, chatID, "Xatolik yuz berdi. / Ошибка.")
+		return
+	}
+
+	sugar.Debugw("bot: /stats — fetched",
+		"user_id", user.ID,
+		"messages", stats.TotalMessages,
+		"words", stats.TotalWords,
+		"streak", stats.StreakDays,
+		"premium", stats.IsPremium)
+
+	daysActive := int(time.Since(user.CreatedAt).Hours() / 24)
+	if daysActive < 1 {
+		daysActive = 1
+	}
+
+	msgText := formatStatsMessage(stats, lang, daysActive)
+	msg := tgbotapi.NewMessage(chatID, msgText)
+	msg.ParseMode = "Markdown"
+	if _, err := bot.Send(msg); err != nil {
+		sugar.Errorw("bot: /stats — send failed", "error", err)
+	}
+
+	sugar.Infow("bot: /stats — done", "telegram_id", telegramID)
 }
 
 func sendMessage(bot *tgbotapi.BotAPI, chatID int64, text string) {

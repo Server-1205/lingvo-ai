@@ -21,7 +21,7 @@
 ### Telegram Bot
 - [x] Регистрация бота через @BotFather
 - [x] Mini App через BotFather (URL на web/)
-- [x] Команды: `/start`, `/help`, `/daily`
+- [x] Команды: `/start`, `/help`, `/daily`, `/stats`
 - [x] Кнопка "Launch" → открывает Mini App
 - [x] Обработка WebApp initData (auth)
 - [x] Webhook ↔ Polling выбор (используется long-polling)
