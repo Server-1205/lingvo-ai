@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMutation } from '@tanstack/react-query';
-import { chatSend } from '../api/client';
-import type { ChatResponse, Correction } from '../api/client';
+import { chatStream } from '../api/client';
+import type { Correction, Usage } from '../api/client';
 import { GrammarBlock } from './GrammarBlock';
 import { UsageIndicator } from './UsageIndicator';
 
@@ -16,24 +15,9 @@ export function Chat() {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
-  const [usage, setUsage] = useState({ daily_used: 0, daily_limit: 10, is_premium: false });
+  const [usage, setUsage] = useState<Usage>({ daily_used: 0, daily_limit: 10, is_premium: false });
+  const [isStreaming, setIsStreaming] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
-
-  const mutation = useMutation({
-    mutationFn: (text: string) => chatSend({ text }),
-    onSuccess: (data: ChatResponse) => {
-      console.debug('[chat] response received', data);
-      setMessages(prev => [...prev, {
-        role: 'ai',
-        text: data.reply,
-        corrections: data.corrections,
-      }]);
-      setUsage(data.usage);
-    },
-    onError: (err: Error) => {
-      console.debug('[chat] error', err.message);
-    },
-  });
 
   useEffect(() => {
     if (listRef.current) {
@@ -41,15 +25,51 @@ export function Chat() {
     }
   }, [messages]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
-    if (!text || mutation.isPending) return;
+    if (!text || isStreaming) return;
 
     console.debug('[chat] sending...', text);
-    setMessages(prev => [...prev, { role: 'user', text }]);
     setInput('');
-    mutation.mutate(text);
+    setMessages(prev => [...prev, { role: 'user', text }]);
+
+    const aiIndex = messages.length + 1;
+    setMessages(prev => [...prev, { role: 'ai', text: '' }]);
+    setIsStreaming(true);
+
+    try {
+      await chatStream(
+        { text },
+        (token) => {
+          setMessages(prev => {
+            const next = [...prev];
+            if (next[aiIndex]) {
+              next[aiIndex] = { ...next[aiIndex], text: next[aiIndex].text + token };
+            }
+            return next;
+          });
+        },
+        (corrections) => {
+          setMessages(prev => {
+            const next = [...prev];
+            if (next[aiIndex]) {
+              next[aiIndex] = { ...next[aiIndex], corrections };
+            }
+            return next;
+          });
+        },
+        (newUsage) => {
+          setUsage(newUsage);
+        },
+        () => {
+          setIsStreaming(false);
+        },
+      );
+    } catch (err) {
+      console.debug('[chat] error', (err as Error).message);
+      setIsStreaming(false);
+    }
   };
 
   return (
@@ -89,7 +109,7 @@ export function Chat() {
             )}
           </div>
         ))}
-        {mutation.isPending && (
+        {isStreaming && (
           <div style={{ margin: '8px 16px', color: 'var(--tg-hint)', fontSize: 14 }}>
             {t('common.loading')}
           </div>
@@ -125,7 +145,7 @@ export function Chat() {
         />
         <button
           type="submit"
-          disabled={!input.trim() || mutation.isPending}
+          disabled={!input.trim() || isStreaming}
           className="btn btn-primary"
           style={{ padding: '10px 16px' }}
         >

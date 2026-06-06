@@ -93,5 +93,6 @@ sinking/
 ## Ссылки
 - SPEC.md — полная спецификация API, БД, промптов
 - ROADMAP.md — этапы и текущий статус
+- docs/streaming.md — Streaming AI responses (SSE)
 - Telegram Mini App docs: https://core.telegram.org/bots/webapps
 - Gemini API: https://ai.google.dev/gemini-api/docs

@@ -37,6 +37,7 @@ func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, botToken string, suga
 	protected.Use(authMw)
 	{
 		protected.POST("/chat", rateMw, chatHandler(db, aiClient, sugar))
+		protected.POST("/chat/stream", rateMw, chatStreamHandler(db, aiClient, sugar))
 		protected.POST("/grammar", grammarHandler(db, aiClient, sugar))
 		protected.GET("/vocab", rateMw, vocabListHandler(db))
 		protected.POST("/vocab", vocabAddHandler(db, sugar))

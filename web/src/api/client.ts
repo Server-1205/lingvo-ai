@@ -231,4 +231,91 @@ export async function saveLevel(req: LevelSaveRequest): Promise<{ status: string
   });
 }
 
+export interface SSEEvent {
+  type: 'token' | 'corrections' | 'usage' | 'done';
+  data?: unknown;
+}
+
+export async function chatStream(
+  req: ChatRequest,
+  onToken: (text: string) => void,
+  onCorrections: (corrections: Correction[]) => void,
+  onUsage: (usage: Usage) => void,
+  onDone: () => void,
+): Promise<void> {
+  const initDataRaw = initData.raw();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (initDataRaw) {
+    headers['X-Telegram-Init-Data'] = initDataRaw;
+  }
+
+  console.debug('[api] POST /api/chat/stream');
+
+  const res = await fetch(`${BASE}/api/chat/stream`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(req),
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new ApiError(
+      (errData as Record<string, unknown>)?.message as string ||
+      (errData as Record<string, unknown>)?.error as string ||
+      'Unknown error',
+      res.status,
+      errData as Record<string, unknown>,
+    );
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) {
+    throw new ApiError('no reader', 0, {});
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+
+      const jsonStr = line.slice(6);
+      let evt: SSEEvent;
+      try {
+        evt = JSON.parse(jsonStr) as SSEEvent;
+      } catch {
+        console.debug('[chat/stream] failed to parse:', jsonStr);
+        continue;
+      }
+
+      console.debug('[chat/stream] event:', evt.type, evt.data);
+
+      switch (evt.type) {
+        case 'token':
+          onToken(evt.data as string);
+          break;
+        case 'corrections':
+          onCorrections(evt.data as Correction[]);
+          break;
+        case 'usage':
+          onUsage(evt.data as Usage);
+          break;
+        case 'done':
+          onDone();
+          break;
+      }
+    }
+  }
+}
+
 export { ApiError };

@@ -8,11 +8,11 @@
 ## Состояние проекта
 
 - **Стадия**: Core — Backend API + middleware работают
-- **Backend**: Go-сервер компилируется, 12 эндпоинтов работают (chat, grammar, vocab CRUD, vocab lookup, quiz, level test, level save, progress, subscription, invoice)
+- **Backend**: Go-сервер компилируется, 13 эндпоинтов работают (chat, chat/stream, grammar, vocab CRUD, vocab lookup, quiz, level test, level save, progress, subscription, invoice)
 - **Middleware**: Auth (HMAC-SHA256 initData), Ratelimit (10/day free, unlimited premium)
 - **Frontend**: UI написан (Chat, NavBar, Subscription, Vocabulary, Progress) — React 19, Vite 8, TS 6
 - **Бот**: Long-polling работает (/start, /help, /daily, successful_payment)
-- **AI**: Gemini-клиент реализован (gemini.go, prompts.go, response.go)
+- **AI**: Gemini-клиент реализован (gemini.go, prompts.go, response.go), Streaming через SSE (chat_stream.go)
 - **БД**: Схема готова (5 таблиц), миграция работает, CRUD готов (users, messages, subscriptions)
 - **i18n**: Frontend uz.json + ru.json (31 ключ), Backend uz.json + ru.json (7 ключей)
 
@@ -42,7 +42,9 @@
 - `internal/api/invoice.go` — POST /api/create-invoice (Telegram Stars)
 - `internal/bot/bot.go` — long-polling loop
 - `internal/bot/handlers.go` — /start, /help, /daily, successful_payment
-- `web/src/components/Chat.tsx` — Chat screen
+- `web/src/components/Chat.tsx` — Chat screen (streaming via SSE)
 - `web/src/components/NavBar.tsx` — Bottom navigation
 - `web/src/components/Subscription.tsx` — Subscription plans
-- `web/src/api/client.ts` — HTTP API client
+- `web/src/api/client.ts` — HTTP API client (streaming via chatStream)
+- `internal/api/chat_stream.go` — SSE streaming endpoint
+- `docs/streaming.md` — Streaming AI responses docs

@@ -7,6 +7,18 @@ import (
 	"github.com/lingvo-ai/lingvo/internal/models"
 )
 
+type StreamEventType string
+
+const (
+	EventToken       StreamEventType = "token"
+	EventResult      StreamEventType = "result"
+)
+
+type StreamEvent struct {
+	Type StreamEventType `json:"type"`
+	Data json.RawMessage `json:"data"`
+}
+
 func ParseAIResponse(raw string) (*models.AIResponse, error) {
 	cleaned := strings.TrimSpace(raw)
 	cleaned = strings.TrimPrefix(cleaned, "```json")
