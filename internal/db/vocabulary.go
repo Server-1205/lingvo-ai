@@ -39,6 +39,19 @@ func DeleteVocabulary(ctx context.Context, db *sqlx.DB, userID, wordID int) erro
 	return err
 }
 
+func GetDueWordCount(ctx context.Context, db *sqlx.DB, userID int) (int, error) {
+	var count int
+	err := db.GetContext(ctx, &count, `
+		SELECT COUNT(*) FROM vocabulary
+		WHERE user_id = ?
+		  AND (next_review IS NULL OR next_review <= datetime('now'))
+	`, userID)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func GetDueWords(ctx context.Context, db *sqlx.DB, userID, limit int) ([]models.VocabWord, error) {
 	var words []models.VocabWord
 	err := db.SelectContext(ctx, &words, `

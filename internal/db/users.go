@@ -31,3 +31,12 @@ func GetUserByTelegramID(ctx context.Context, db *sqlx.DB, telegramID int64) (*m
 	}
 	return &u, nil
 }
+
+func GetAllUsers(ctx context.Context, db *sqlx.DB) ([]models.User, error) {
+	var users []models.User
+	err := db.SelectContext(ctx, &users, "SELECT * FROM users ORDER BY id ASC")
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
