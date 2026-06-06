@@ -5,10 +5,14 @@ import { getVocab, addVocab, deleteVocab, lookupVocab, getDueWords, submitReview
 import type { VocabWord, VocabLookupResponse } from '../api/client';
 import { ReviewCard } from './ReviewCard';
 
-export function Vocabulary() {
+interface VocabularyProps {
+  initialTab?: 'my' | 'lookup' | 'review';
+}
+
+export function Vocabulary({ initialTab }: VocabularyProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<'my' | 'lookup' | 'review'>('my');
+  const [tab, setTab] = useState<'my' | 'lookup' | 'review'>(initialTab || 'my');
   const [reviewIndex, setReviewIndex] = useState(0);
   const [lookupWord, setLookupWord] = useState('');
   const [showAdd, setShowAdd] = useState<VocabLookupResponse | null>(null);
