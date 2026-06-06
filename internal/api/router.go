@@ -42,6 +42,8 @@ func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, botToken string, suga
 		protected.POST("/vocab", vocabAddHandler(db, sugar))
 		protected.DELETE("/vocab/:id", vocabDeleteHandler(db, sugar))
 		protected.POST("/vocab/lookup", vocabLookupHandler(aiClient, sugar))
+		protected.GET("/vocab/review", vocabReviewHandler(db))
+		protected.POST("/vocab/review/:id", vocabReviewSubmitHandler(db, sugar))
 		protected.POST("/quiz", rateMw, quizHandler(db, aiClient, sugar))
 		protected.POST("/level", levelTestHandler(db, aiClient, sugar))
 		protected.POST("/level/save", levelSaveHandler(db))
