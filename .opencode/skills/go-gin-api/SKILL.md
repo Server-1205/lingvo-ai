@@ -55,3 +55,4 @@ func chatHandler(db *sqlx.DB, bot *tgbotapi.BotAPI) gin.HandlerFunc {
 - Use `c.ShouldBindJSON(&struct)` for request parsing
 - Use `c.Query("param")` for GET query params
 - Always validate required fields before processing
+- Always set `Cache-Control: no-store` on API responses: `c.Header("Cache-Control", "no-store")` before `c.JSON()`. Telegram Mini Apps may cache responses aggressively.

@@ -1,3 +1,5 @@
+[← Конфигурация](configuration.md) · [Back to README](../README.md)
+
 # Streaming AI Responses
 
 The chat endpoint supports Server-Sent Events (SSE) for real-time streaming of AI responses.
@@ -51,5 +53,5 @@ The React Chat component uses `fetch` with `ReadableStream` to consume the SSE s
 
 ## See Also
 
-- [Chat Endpoint (non-streaming)](../internal/api/chat.go) — original blocking endpoint
-- [Gemini Client](../internal/ai/gemini.go) — AI client implementation
+- [API Reference](api.md) — все эндпоинты
+- [Установка и запуск](getting-started.md) — как запустить проект

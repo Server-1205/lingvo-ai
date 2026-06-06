@@ -1,0 +1,15 @@
+# compose.override.yml — Development overrides (auto-merged by docker compose up)
+
+services:
+  app:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+      - /app/web/node_modules
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      LOG_LEVEL: debug
+    command: air

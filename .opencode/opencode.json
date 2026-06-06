@@ -13,15 +13,15 @@
     },
     "sqlite": {
       "type": "local",
-      "command": ["npx", "-y", "@joshmossas/sqlite-mcp", "--dbPath", "lingvo.db"],
+      "command": ["npx", "-y", "@joshmossas/sqlite-mcp", "--dbPath", "/home/asdev/projects/sinking/lingvo.db"],
       "enabled": true,
       "env": {
-        "SQLITE_DB_PATH": "lingvo.db"
+        "SQLITE_DB_PATH": "/home/asdev/projects/sinking/lingvo.db"
       }
     },
     "sequential-thinking": {
       "type": "local",
-      "command": ["npx", "-y", "@stdlib/sequential-thinking-mcp"],
+      "command": ["npx", "-y", "@anthropic-ai/sequential-thinking-mcp"],
       "enabled": true
     }
   },
@@ -30,26 +30,7 @@
     "paths": [".opencode/skills"]
   },
 
-  "permission": {
-    "edit": "allow",
-    "bash": {
-      "git *": "allow",
-      "go *": "allow",
-      "npm *": "allow",
-      "pnpm *": "allow",
-      "ls *": "allow",
-      "cat *": "allow",
-      "mkdir *": "allow",
-      "cp *": "allow",
-      "mv *": "allow",
-      "rm *": "allow",
-      "*": "ask"
-    },
-    "external_directory": {
-      "/home/asdev/projects/sinking/**": "allow",
-      "*": "ask"
-    }
-  },
+  "permission": "allow",
 
   "experimental": {
     "primary_tools": [

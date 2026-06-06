@@ -1,0 +1,50 @@
+# Version control
+.git
+.gitignore
+
+# CI/CD
+.github
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docker (prevent recursive copy)
+Dockerfile*
+docker-compose*
+compose*
+.dockerignore
+
+# Dependencies (rebuilt in container)
+node_modules
+
+# Environment files (secrets)
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+bin
+server
+coverage
+coverage.out
+coverage.html
+
+# Database
+*.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+docs/
+
+# AI Factory
+.ai-factory
+
+# OpenCode
+.opencode
