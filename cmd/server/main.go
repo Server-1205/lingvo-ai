@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -46,16 +45,26 @@ func main() {
 	// Init router
 	r := gin.Default()
 
-	// Health
-	r.GET("/api/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	// API routes (includes /api/health)
+	api.RegisterRoutes(r, database, geminiKey, botToken, sugar)
+
+	// No-cache middleware for frontend assets
+	r.Use(func(c *gin.Context) {
+		if !c.IsAborted() {
+			c.Header("Cache-Control", "no-store")
+		}
+		c.Next()
 	})
 
-	// Serve frontend
-	r.StaticFS("/", http.Dir("./web/dist"))
+	// Serve static frontend files
+	r.Static("/assets", "./web/dist/assets")
+	r.StaticFile("/favicon.svg", "./web/dist/favicon.svg")
+	r.StaticFile("/icons.svg", "./web/dist/icons.svg")
 
-	// API routes
-	api.RegisterRoutes(r, database, geminiKey, botToken, sugar)
+	// SPA fallback — serve index.html for all unmatched routes
+	r.NoRoute(func(c *gin.Context) {
+		c.File("./web/dist/index.html")
+	})
 
 	// Start bot (long-polling, blocking in goroutine)
 	if botToken != "" {

@@ -7,10 +7,12 @@ import { Chat } from './components/Chat';
 import { Vocabulary } from './components/Vocabulary';
 import { ProgressView } from './components/Progress';
 import { SubscriptionPlans } from './components/Subscription';
+import { LevelTest } from './components/LevelTest';
 import { useTelegram } from './hooks/useTelegram';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('chat');
+  const [showLevelTest, setShowLevelTest] = useState(false);
   const { t } = useTranslation();
   const { user, theme } = useTelegram();
 
@@ -55,13 +57,19 @@ function App() {
         flexDirection: 'column',
         overflow: 'hidden',
       }}>
-        {activeTab === 'chat' && <Chat />}
-        {activeTab === 'vocab' && <Vocabulary />}
-        {activeTab === 'progress' && <ProgressView />}
-        {activeTab === 'subscription' && <SubscriptionPlans />}
+        {showLevelTest ? (
+          <LevelTest onDone={() => setShowLevelTest(false)} />
+        ) : (
+          <>
+            {activeTab === 'chat' && <Chat />}
+            {activeTab === 'vocab' && <Vocabulary />}
+            {activeTab === 'progress' && <ProgressView onStartLevelTest={() => setShowLevelTest(true)} />}
+            {activeTab === 'subscription' && <SubscriptionPlans />}
+          </>
+        )}
       </main>
 
-      <NavBar active={activeTab} onTabChange={setActiveTab} />
+      {!showLevelTest && <NavBar active={activeTab} onTabChange={setActiveTab} />}
     </div>
   );
 }
