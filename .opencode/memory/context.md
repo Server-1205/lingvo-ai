@@ -11,7 +11,7 @@
 - **Backend**: Go-сервер компилируется, 12 эндпоинтов работают (chat, grammar, vocab CRUD, vocab lookup, quiz, level test, level save, progress, subscription, invoice)
 - **Middleware**: Auth (HMAC-SHA256 initData), Ratelimit (10/day free, unlimited premium)
 - **Frontend**: UI написан (Chat, NavBar, Subscription, Vocabulary, Progress) — React 19, Vite 8, TS 6
-- **Бот**: Long-polling работает (/start, /help, /daily, successful_payment)
+- **Бот**: Long-polling работает (/start, /help, /daily, /stats, successful_payment)
 - **AI**: Gemini-клиент реализован (gemini.go, prompts.go, response.go)
 - **БД**: Схема готова (5 таблиц), миграция работает, CRUD готов (users, messages, subscriptions)
 - **i18n**: Frontend uz.json + ru.json (31 ключ), Backend uz.json + ru.json (7 ключей)

@@ -101,7 +101,7 @@ Rationale: /stats is the last missing bot command from Stage 1 core infrastructu
   - None needed
 
 ### Phase 3: Tests
-- [ ] **Task 5: Write tests for DB function** (depends on: 1, 2)
+- [x] **Task 5: Write tests for DB function** (depends on: 1, 2)
 
   **Files:**
   - `internal/db/progress_test.go` — new file
@@ -117,7 +117,7 @@ Rationale: /stats is the last missing bot command from Stage 1 core infrastructu
   - DEBUG: "test: GetUserStats — setup fixture"
   - INFO: "test: GetUserStats — passed %d assertions"
 
-- [ ] **Task 6: Write tests for bot handler** (depends on: 2, 3)
+- [x] **Task 6: Write tests for bot handler** (depends on: 2, 3)
 
   **Files:**
   - `internal/bot/handlers_test.go` — new file

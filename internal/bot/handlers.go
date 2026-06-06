@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/lingvo-ai/lingvo/internal/db"
+	"github.com/lingvo-ai/lingvo/internal/models"
 )
 
 var durationMap = map[string]string{
@@ -189,6 +190,39 @@ func handlePayment(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLo
 	}
 }
 
+func formatStatsMessage(stats *models.UserStats, lang string, daysActive int) string {
+	premiumStatus := "❌ Yo'q / Нет"
+	if stats.IsPremium {
+		premiumStatus = fmt.Sprintf("✅ %s", stats.SubscriptionExpiry)
+	}
+
+	if lang == "ru" {
+		return fmt.Sprintf(
+			"📊 *Статистика*\n\n"+
+				"🎯 Уровень: *%s*\n"+
+				"💬 Всего сообщений: *%d*\n"+
+				"📚 Слов в словаре: *%d*\n"+
+				"📝 На повторении сегодня: *%d*\n"+
+				"🔥 Streak: *%d дней*\n"+
+				"👤 Аккаунту: *%d дней*\n"+
+				"⭐ Подписка: *%s*\n",
+			stats.Level, stats.TotalMessages, stats.TotalWords,
+			stats.WordsDueToday, stats.StreakDays, daysActive, premiumStatus)
+	}
+
+	return fmt.Sprintf(
+		"📊 *Statistika*\n\n"+
+			"🎯 Daraja: *%s*\n"+
+			"💬 Jami xabarlar: *%d*\n"+
+			"📚 Lug'atdagi so'zlar: *%d*\n"+
+			"📝 Bugungi takrorlash: *%d*\n"+
+			"🔥 Streak: *%d kun*\n"+
+			"👤 Akkount: *%d kun*\n"+
+			"⭐ Obuna: *%s*\n",
+		stats.Level, stats.TotalMessages, stats.TotalWords,
+		stats.WordsDueToday, stats.StreakDays, daysActive, premiumStatus)
+}
+
 func handleStats(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger, chatID int64, telegramID int64, lang string) {
 	sugar.Debugw("bot: /stats", "telegram_id", telegramID)
 
@@ -220,38 +254,7 @@ func handleStats(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogg
 		daysActive = 1
 	}
 
-	premiumStatus := "❌ Yo'q / Нет"
-	if stats.IsPremium {
-		premiumStatus = fmt.Sprintf("✅ %s", stats.SubscriptionExpiry)
-	}
-
-	var msgText string
-	if lang == "ru" {
-		msgText = fmt.Sprintf(
-			"📊 *Статистика*\n\n"+
-				"🎯 Уровень: *%s*\n"+
-				"💬 Всего сообщений: *%d*\n"+
-				"📚 Слов в словаре: *%d*\n"+
-				"📝 На повторении сегодня: *%d*\n"+
-				"🔥 Streak: *%d дней*\n"+
-				"👤 Аккаунту: *%d дней*\n"+
-				"⭐ Подписка: *%s*\n",
-			stats.Level, stats.TotalMessages, stats.TotalWords,
-			stats.WordsDueToday, stats.StreakDays, daysActive, premiumStatus)
-	} else {
-		msgText = fmt.Sprintf(
-			"📊 *Statistika*\n\n"+
-				"🎯 Daraja: *%s*\n"+
-				"💬 Jami xabarlar: *%d*\n"+
-				"📚 Lug'atdagi so'zlar: *%d*\n"+
-				"📝 Bugungi takrorlash: *%d*\n"+
-				"🔥 Streak: *%d kun*\n"+
-				"👤 Akkount: *%d kun*\n"+
-				"⭐ Obuna: *%s*\n",
-			stats.Level, stats.TotalMessages, stats.TotalWords,
-			stats.WordsDueToday, stats.StreakDays, daysActive, premiumStatus)
-	}
-
+	msgText := formatStatsMessage(stats, lang, daysActive)
 	msg := tgbotapi.NewMessage(chatID, msgText)
 	msg.ParseMode = "Markdown"
 	if _, err := bot.Send(msg); err != nil {
