@@ -13,7 +13,7 @@ go mod tidy
 go run ./cmd/server
 
 # Frontend
-cd web && pnpm install && pnpm dev
+cd web && npm install && npm run dev
 ```
 
 ## Команды разработки
@@ -23,7 +23,7 @@ cd web && pnpm install && pnpm dev
 | Запустить backend | `go run ./cmd/server` |
 | Собрать backend | `go build -o server ./cmd/server` |
 | Запустить frontend (dev) | `cd web && pnpm dev` |
-| Собрать frontend | `cd web && pnpm build` |
+| Собрать frontend | `cd web && npm run build` |
 | Установить Go зависимости | `go mod tidy` |
 | Установить JS зависимости | `cd web && pnpm install` |
 
@@ -85,7 +85,7 @@ sinking/
 
 ## Чеклист перед коммитом
 - [ ] `go build ./...` успешно
-- [ ] `cd web && pnpm build` успешно
+- [ ] `cd web && npm run build` успешно
 - [ ] Нет секретов в коде (только env)
 - [ ] `go mod tidy` если меняли зависимости
 - [ ] Схема БД актуальна (schema.sql)

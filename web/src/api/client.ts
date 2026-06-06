@@ -49,19 +49,46 @@ export interface VocabWord {
   level: string;
   review_count: number;
   next_review: string | null;
+  created_at: string;
 }
 
-export interface VocabListResponse {
-  words: VocabWord[];
-  total: number;
-  due_count: number;
+export interface VocabLookupRequest {
+  word: string;
+}
+
+export interface VocabLookupResponse {
+  translation_uz: string;
+  translation_ru: string;
+  examples: string[];
+  level: string;
+}
+
+export interface AddVocabRequest {
+  word: string;
+  translation: string;
+  example: string;
+  level?: string;
+}
+
+export interface GrammarRequest {
+  text: string;
+}
+
+export interface GrammarResponse {
+  corrections: Correction[];
 }
 
 export interface ProgressResponse {
+  messages_sent: number;
+  words_learned: number;
+  quizzes_taken: number;
+  streak_days: number;
   level: string;
-  messages: number;
-  words: number;
-  streak: number;
+}
+
+export interface QuizRequest {
+  topic?: string;
+  count?: number;
 }
 
 export interface QuizQuestion {
@@ -77,8 +104,21 @@ export interface QuizResponse {
 }
 
 export interface LevelResponse {
+  questions: LevelQuestion[];
+  level?: string;
+}
+
+export interface LevelQuestion {
+  question: string;
+  options: string[];
+  correct: number;
   level: string;
-  score: number;
+  explanation_uz: string;
+  explanation_ru: string;
+}
+
+export interface LevelSaveRequest {
+  level: string;
 }
 
 class ApiError extends Error {
@@ -142,24 +182,53 @@ export async function createInvoice(req: InvoiceRequest): Promise<InvoiceRespons
   });
 }
 
-export async function getVocab(page = 1, perPage = 20, dueOnly = false): Promise<VocabListResponse> {
-  const params = new URLSearchParams({
-    page: String(page),
-    per_page: String(perPage),
-  });
-  if (dueOnly) params.set('due_only', 'true');
-  return request<VocabListResponse>(`/api/vocab?${params}`);
+export async function getVocab(): Promise<VocabWord[]> {
+  return request<VocabWord[]>('/api/vocab');
 }
 
-export async function addVocab(word: string): Promise<VocabWord> {
-  return request<VocabWord>('/api/vocab', {
+export async function addVocab(req: AddVocabRequest): Promise<{ status: string }> {
+  return request<{ status: string }>('/api/vocab', {
     method: 'POST',
-    body: JSON.stringify({ word }),
+    body: JSON.stringify(req),
+  });
+}
+
+export async function deleteVocab(id: number): Promise<{ status: string }> {
+  return request<{ status: string }>(`/api/vocab/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function lookupVocab(req: VocabLookupRequest): Promise<VocabLookupResponse> {
+  return request<VocabLookupResponse>('/api/vocab/lookup', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+export async function checkGrammar(req: GrammarRequest): Promise<GrammarResponse> {
+  return request<GrammarResponse>('/api/grammar', {
+    method: 'POST',
+    body: JSON.stringify(req),
   });
 }
 
 export async function getProgress(): Promise<ProgressResponse> {
   return request<ProgressResponse>('/api/progress');
+}
+
+export async function getQuiz(req: QuizRequest): Promise<QuizResponse> {
+  return request<QuizResponse>('/api/quiz', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+export async function saveLevel(req: LevelSaveRequest): Promise<{ status: string; level: string }> {
+  return request<{ status: string; level: string }>('/api/level/save', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
 }
 
 export { ApiError };
