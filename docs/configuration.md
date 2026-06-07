@@ -14,7 +14,9 @@
 | `PORT` | Нет | `8080` | Порт HTTP-сервера |
 | `WEBAPP_URL` | Нет | (пусто) | URL Mini App для CORS/deeplink |
 | `ADMIN_IDS` | Нет | (пусто) | Telegram ID администраторов (через запятую) |
-| `OPENAI_API_KEY` | Нет | — | API ключ для fallback (GPT-4o-mini) |
+| `OPENAI_API_KEY` | Нет | — | API ключ для fallback (OpenAI-совместимый) |
+| `OPENAI_BASE_URL` | Нет | `https://api.openai.com/v1` | Базовый URL для fallback API (DeepSeek, Groq и т.д.) |
+| `OPENAI_MODEL` | Нет | `gpt-4o-mini` | Модель для fallback |
 
 ## Файл .env
 

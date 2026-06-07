@@ -16,6 +16,13 @@ import (
 
 func quizHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		c.Header("Cache-Control", "no-store")
+
+		if aiClient == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai_service_unavailable"})
+			return
+		}
+
 		var req models.QuizRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
@@ -34,7 +41,7 @@ func quizHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLogge
 
 		prompt := ai.BuildQuizPrompt(req.Topic, req.Count, lng)
 
-		raw, err := aiClient.Generate(c.Request.Context(), prompt)
+		raw, err := aiClient.GenerateLite(c.Request.Context(), prompt)
 		if err != nil {
 			sugar.Errorw("ai quiz error", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ai_service_unavailable"})

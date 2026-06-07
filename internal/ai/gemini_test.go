@@ -9,14 +9,20 @@ import (
 	"github.com/lingvo-ai/lingvo/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
+
+func newTestSugar() *zap.SugaredLogger {
+	return zap.NewNop().Sugar()
+}
 
 func TestChatStream_ReturnsChannel(t *testing.T) {
 	key := os.Getenv("GEMINI_API_KEY")
 	if key == "" {
 		t.Skip("GEMINI_API_KEY not set")
 	}
-	client, err := NewClient(context.Background(), key)
+	sugar := newTestSugar()
+	client, err := NewClient(context.Background(), key, "", "", "", sugar)
 	require.NoError(t, err)
 	defer client.Close()
 
@@ -43,7 +49,8 @@ func TestChatStream_EmitsTokenAndResult(t *testing.T) {
 	if key == "" {
 		t.Skip("GEMINI_API_KEY not set")
 	}
-	client, err := NewClient(context.Background(), key)
+	sugar := newTestSugar()
+	client, err := NewClient(context.Background(), key, "", "", "", sugar)
 	require.NoError(t, err)
 	defer client.Close()
 
@@ -70,7 +77,8 @@ func TestChatStream_ContextCancellation(t *testing.T) {
 	if key == "" {
 		t.Skip("GEMINI_API_KEY not set")
 	}
-	client, err := NewClient(context.Background(), key)
+	sugar := newTestSugar()
+	client, err := NewClient(context.Background(), key, "", "", "", sugar)
 	require.NoError(t, err)
 	defer client.Close()
 

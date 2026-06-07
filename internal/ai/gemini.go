@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/generative-ai-go/genai"
 	"github.com/lingvo-ai/lingvo/internal/models"
+	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
@@ -14,9 +15,12 @@ import (
 type Client struct {
 	genClient *genai.Client
 	model     *genai.GenerativeModel
+	liteModel *genai.GenerativeModel
+	fallback  *openAIClient
+	sugar     *zap.SugaredLogger
 }
 
-func NewClient(ctx context.Context, apiKey string) (*Client, error) {
+func NewClient(ctx context.Context, apiKey string, openAIKey, openAIBaseURL, openAIModel string, sugar *zap.SugaredLogger) (*Client, error) {
 	genClient, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
 		return nil, err
@@ -25,9 +29,23 @@ func NewClient(ctx context.Context, apiKey string) (*Client, error) {
 	model := genClient.GenerativeModel("gemini-2.0-flash")
 	model.SetTemperature(0.4)
 
+	liteModel := genClient.GenerativeModel("gemini-2.0-flash-lite")
+	liteModel.SetTemperature(0.4)
+
+	var fb *openAIClient
+	if openAIKey != "" {
+		fb = newOpenAIClient(openAIKey, openAIBaseURL, openAIModel)
+		sugar.Infow("openai-compatible fallback configured", "model", openAIModel, "base_url", openAIBaseURL)
+	} else {
+		sugar.Warn("OPENAI_API_KEY not set, AI fallback disabled")
+	}
+
 	return &Client{
 		genClient: genClient,
 		model:     model,
+		liteModel: liteModel,
+		fallback:  fb,
+		sugar:     sugar,
 	}, nil
 }
 
@@ -35,8 +53,46 @@ func (c *Client) Close() error {
 	return c.genClient.Close()
 }
 
+func (c *Client) GenerateLite(ctx context.Context, prompt string) (string, error) {
+	text, err := c.generateModel(ctx, c.liteModel, prompt)
+	if err == nil {
+		return text, nil
+	}
+
+	c.sugar.Warnw("gemini lite generate failed, trying fallback", "error", err)
+	if c.fallback != nil && c.fallback.IsConfigured() {
+		fallbackText, fbErr := c.fallback.Generate(ctx, prompt)
+		if fbErr == nil {
+			c.sugar.Warn("fallback AI used for lite request")
+			return fallbackText, nil
+		}
+		c.sugar.Errorw("fallback also failed", "error", fbErr)
+	}
+
+	return "", err
+}
+
 func (c *Client) Generate(ctx context.Context, prompt string) (string, error) {
-	resp, err := c.model.GenerateContent(ctx, genai.Text(prompt))
+	text, err := c.generateModel(ctx, c.model, prompt)
+	if err == nil {
+		return text, nil
+	}
+
+	c.sugar.Warnw("gemini generate failed, trying fallback", "error", err)
+	if c.fallback != nil && c.fallback.IsConfigured() {
+		fallbackText, fbErr := c.fallback.Generate(ctx, prompt)
+		if fbErr == nil {
+			c.sugar.Warn("fallback AI used")
+			return fallbackText, nil
+		}
+		c.sugar.Errorw("fallback also failed", "error", fbErr)
+	}
+
+	return "", err
+}
+
+func (c *Client) generateModel(ctx context.Context, model *genai.GenerativeModel, prompt string) (string, error) {
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
 		return "", err
 	}
@@ -56,13 +112,40 @@ func (c *Client) Generate(ctx context.Context, prompt string) (string, error) {
 }
 
 func (c *Client) Chat(ctx context.Context, prompt string) (*models.AIResponse, error) {
-	resp, err := c.model.GenerateContent(ctx, genai.Text(prompt))
+	text, err := c.chatWithModel(ctx, c.model, prompt)
+	if err == nil && text != "" {
+		return c.parseAIResponse(text)
+	}
+
 	if err != nil {
-		return nil, err
+		c.sugar.Warnw("gemini chat failed, trying fallback", "error", err)
+	} else {
+		c.sugar.Warn("gemini chat returned empty, trying fallback")
+	}
+
+	if c.fallback != nil && c.fallback.IsConfigured() {
+		fallbackText, fbErr := c.fallback.Generate(ctx, prompt)
+		if fbErr == nil && fallbackText != "" {
+			c.sugar.Warn("fallback AI used for chat")
+			return c.parseAIResponse(fallbackText)
+		}
+		c.sugar.Errorw("fallback also failed for chat", "error", fbErr)
+	}
+
+	if text != "" {
+		return c.parseAIResponse(text)
+	}
+	return nil, err
+}
+
+func (c *Client) chatWithModel(ctx context.Context, model *genai.GenerativeModel, prompt string) (string, error) {
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return "", err
 	}
 
 	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		return nil, nil
+		return "", nil
 	}
 
 	text := ""
@@ -71,7 +154,10 @@ func (c *Client) Chat(ctx context.Context, prompt string) (*models.AIResponse, e
 			text += string(t)
 		}
 	}
+	return text, nil
+}
 
+func (c *Client) parseAIResponse(text string) (*models.AIResponse, error) {
 	if text == "" {
 		return nil, nil
 	}

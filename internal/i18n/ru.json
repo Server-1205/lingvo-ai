@@ -1,9 +1,0 @@
-{
-  "limit_exceeded": "Дневной лимит исчерпан. Оформите подписку!",
-  "welcome": "👋 Привет! Я Lingvo AI — твой личный учитель английского.",
-  "help": "📚 *Lingvo AI — помощь*\n\n/start — Начать\n/daily — Урок дня\n/help — Помощь\n\nИспользуй Mini App для пополнения словарного запаса и общения с AI.",
-  "subscription_active": "✅ Подписка активна. {plan} — действует до {expires}.",
-  "subscription_expired": "Подписка истекла. Оформите безлимитную подписку!",
-  "daily_title": "📅 *Урок дня*\n\nУровень: {level}\n\n{lesson}",
-  "start_button": "🚀 Запустить Lingvo AI"
-}

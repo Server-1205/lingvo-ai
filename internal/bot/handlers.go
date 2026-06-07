@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -15,16 +14,6 @@ import (
 	"github.com/lingvo-ai/lingvo/internal/db"
 	"github.com/lingvo-ai/lingvo/internal/models"
 )
-
-var durationMap = map[string]string{
-	"weekly":  "+7 days",
-	"monthly": "+30 days",
-}
-
-var planStars = map[string]int{
-	"weekly":  300,
-	"monthly": 800,
-}
 
 func welcomeText(lang string) string {
 	msgs := map[string]string{
@@ -181,58 +170,6 @@ func handleDaily(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogg
 	}
 }
 
-func handlePayment(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger, update tgbotapi.Update) {
-	if update.Message == nil || update.Message.SuccessfulPayment == nil {
-		return
-	}
-
-	payment := update.Message.SuccessfulPayment
-	payload := payment.InvoicePayload
-	starsAmount := payment.TotalAmount
-	chatID := update.Message.Chat.ID
-	telegramID := update.Message.From.ID
-
-	sugar.Infow("successful payment", "telegram_id", telegramID, "payload", payload, "stars", starsAmount)
-
-	parts := strings.SplitN(payload, "_", 2)
-	if len(parts) != 2 {
-		sugar.Errorw("invalid payment payload", "payload", payload)
-		sendMessage(bot, chatID, "To'lovda xatolik. / Ошибка оплаты.")
-		return
-	}
-
-	plan := parts[0]
-	userIDStr := parts[1]
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		sugar.Errorw("invalid user id in payload", "user_id", userIDStr)
-		return
-	}
-
-	if _, ok := durationMap[plan]; !ok {
-		sugar.Errorw("unknown plan", "plan", plan)
-		return
-	}
-
-	expiresAt := time.Now().UTC().AddDate(0, 0, 7)
-	if plan == "monthly" {
-		expiresAt = time.Now().UTC().AddDate(0, 1, 0)
-	}
-
-	ctx := context.Background()
-	if err := db.SaveSubscription(ctx, database, userID, plan, starsAmount, expiresAt.Format("2006-01-02 15:04:05")); err != nil {
-		sugar.Errorw("save subscription", "error", err)
-		sendMessage(bot, chatID, "Xatolik. / Ошибка.")
-		return
-	}
-
-	msg := buildSubscriptionConfirmation(chatID, update.Message.From.LanguageCode, plan, expiresAt)
-	if _, err := bot.Send(msg); err != nil {
-		sugar.Errorw("send payment confirmation", "error", err)
-	}
-}
-
 func formatStatsMessage(stats *models.UserStats, lang string, daysActive int) string {
 	premiumStatus := "❌ Yo'q / Нет"
 	if stats.IsPremium {
@@ -312,36 +249,6 @@ func sendMessage(bot *tgbotapi.BotAPI, chatID int64, text string) {
 	if _, err := bot.Send(msg); err != nil {
 		// silent
 	}
-}
-
-func buildSubscriptionConfirmation(chatID int64, lang, plan string, expiresAt time.Time) tgbotapi.MessageConfig {
-	msgs := map[string]string{
-		"uz": fmt.Sprintf("✅ *Обуна фаоллаштирилди!*\n\n"+
-			"Режа: *%s*\n"+
-			"Амал қилади: *%s*\n\n"+
-			"Энди сиз чексиз AI хабарлардан фойдалана оласиз! 🎉",
-			planTitle(plan, "uz"), expiresAt.Format("2006-01-02")),
-		"ru": fmt.Sprintf("✅ *Подписка активирована!*\n\n"+
-			"План: *%s*\n"+
-			"Действует до: *%s*\n\n"+
-			"Теперь у вас безлимитные AI-сообщения! 🎉",
-			planTitle(plan, "ru"), expiresAt.Format("2006-01-02")),
-	}
-
-	msg := tgbotapi.NewMessage(chatID, msgs[lang])
-	msg.ParseMode = "Markdown"
-	return msg
-}
-
-func planTitle(plan, lang string) string {
-	titles := map[string]map[string]string{
-		"weekly":  {"uz": "Ҳафталик", "ru": "Недельная"},
-		"monthly": {"uz": "Ойлик", "ru": "Месячная"},
-	}
-	if t, ok := titles[plan][lang]; ok {
-		return t
-	}
-	return plan
 }
 
 func launchKeyboard(chatID int64, lang string) interface{} {

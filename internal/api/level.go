@@ -14,6 +14,13 @@ import (
 
 func levelTestHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		c.Header("Cache-Control", "no-store")
+
+		if aiClient == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai_service_unavailable"})
+			return
+		}
+
 		var req models.LevelRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
@@ -25,7 +32,7 @@ func levelTestHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.Sugared
 
 		prompt := ai.BuildLevelTestPrompt(lng)
 
-		raw, err := aiClient.Generate(c.Request.Context(), prompt)
+		raw, err := aiClient.GenerateLite(c.Request.Context(), prompt)
 		if err != nil {
 			sugar.Errorw("ai level test error", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ai_service_unavailable"})

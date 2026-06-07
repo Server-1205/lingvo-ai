@@ -53,6 +53,9 @@ func main() {
 	// Config from env
 	botToken := os.Getenv("BOT_TOKEN")
 	geminiKey := os.Getenv("GEMINI_API_KEY")
+	openAIKey := os.Getenv("OPENAI_API_KEY")
+	openAIBaseURL := os.Getenv("OPENAI_BASE_URL")
+	openAIModel := os.Getenv("OPENAI_MODEL")
 	dbPath := os.Getenv("DATABASE_PATH")
 	if dbPath == "" {
 		dbPath = "lingvo.db"
@@ -75,7 +78,7 @@ func main() {
 	r := gin.Default()
 
 	// API routes (includes /api/health)
-	api.RegisterRoutes(r, database, geminiKey, botToken, sugar)
+	api.RegisterRoutes(r, database, geminiKey, openAIKey, openAIBaseURL, openAIModel, botToken, sugar)
 
 	// No-cache middleware for frontend assets
 	r.Use(func(c *gin.Context) {

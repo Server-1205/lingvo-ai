@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -15,6 +16,7 @@ import (
 )
 
 type reviewRequest struct {
+	WordID  int `json:"word_id" binding:"required"`
 	Quality int `json:"quality" binding:"min=0,max=5"`
 }
 
@@ -24,26 +26,70 @@ type reviewResponse struct {
 
 func vocabListHandler(database *sqlx.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		c.Header("Cache-Control", "no-store")
+
 		userID, _ := c.Get("user_id")
 		uid, _ := userID.(int)
 
-		words, err := db.GetVocabulary(c.Request.Context(), database, uid)
-		if err != nil {
+		page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+		if page < 1 {
+			page = 1
+		}
+		perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "20"))
+		if perPage < 1 {
+			perPage = 20
+		}
+		if perPage > 100 {
+			perPage = 100
+		}
+		dueOnly := c.DefaultQuery("due_only", "false") == "true"
+
+		where := "WHERE user_id = ?"
+		args := []interface{}{uid}
+		if dueOnly {
+			where += " AND (next_review IS NULL OR next_review <= datetime('now'))"
+		}
+
+		var total int
+		if err := database.GetContext(c.Request.Context(), &total,
+			"SELECT COUNT(*) FROM vocabulary "+where, args...); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal_error"})
 			return
 		}
 
+		query := "SELECT * FROM vocabulary " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+		queryArgs := append(args, perPage, (page-1)*perPage)
+		var words []models.VocabWord
+		if err := database.SelectContext(c.Request.Context(), &words, query, queryArgs...); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal_error"})
+			return
+		}
 		if words == nil {
 			words = []models.VocabWord{}
 		}
 
-		c.JSON(http.StatusOK, words)
+		dueCount, _ := db.GetDueWordCount(c.Request.Context(), database, uid)
+
+		c.JSON(http.StatusOK, models.VocabListResponse{
+			Words:    words,
+			Total:    total,
+			DueCount: dueCount,
+		})
 	}
 }
 
-func vocabAddHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.HandlerFunc {
+func vocabAddHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req models.AddVocabRequest
+		c.Header("Cache-Control", "no-store")
+
+		if aiClient == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai_service_unavailable"})
+			return
+		}
+
+		var req struct {
+			Word string `json:"word" binding:"required"`
+		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
 			return
@@ -51,14 +97,38 @@ func vocabAddHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.HandlerFun
 
 		userID, _ := c.Get("user_id")
 		uid, _ := userID.(int)
+		lang, _ := c.Get("lang")
+		lng, _ := lang.(string)
 
-		if err := db.AddVocabulary(c.Request.Context(), database, uid, req.Word, req.Translation, req.Example, req.Level); err != nil {
+		prompt := ai.BuildVocabPrompt(lng, req.Word)
+		raw, err := aiClient.Generate(c.Request.Context(), prompt)
+		if err != nil {
+			sugar.Errorw("ai vocab lookup error", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ai_service_unavailable"})
+			return
+		}
+
+		raw = cleanJSON(raw)
+		var lookupResp models.VocabLookupResponse
+		if err := json.Unmarshal([]byte(raw), &lookupResp); err != nil {
+			sugar.Errorw("parse vocab response", "error", err, "raw", raw)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "parse_error"})
+			return
+		}
+
+		example := ""
+		if len(lookupResp.Examples) > 0 {
+			example = lookupResp.Examples[0]
+		}
+		if err := db.AddVocabulary(c.Request.Context(), database, uid, req.Word, lookupResp.TranslationUz, example, lookupResp.Level); err != nil {
 			sugar.Errorw("add vocab", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal_error"})
 			return
 		}
 
-		c.JSON(http.StatusCreated, gin.H{"status": "ok"})
+		sugar.Infow("vocab added via ai", "word", req.Word, "user_id", uid)
+
+		c.JSON(http.StatusCreated, lookupResp)
 	}
 }
 
@@ -111,12 +181,7 @@ func vocabReviewHandler(database *sqlx.DB) gin.HandlerFunc {
 
 func vocabReviewSubmitHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		idStr := c.Param("id")
-		wordID, err := strconv.Atoi(idStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_id"})
-			return
-		}
+		c.Header("Cache-Control", "no-store")
 
 		var req reviewRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -129,7 +194,7 @@ func vocabReviewSubmitHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.H
 
 		var word models.VocabWord
 		if err := database.GetContext(c.Request.Context(), &word,
-			"SELECT * FROM vocabulary WHERE id = ? AND user_id = ?", wordID, uid); err != nil {
+			"SELECT * FROM vocabulary WHERE id = ? AND user_id = ?", req.WordID, uid); err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "word_not_found"})
 			return
 		}
@@ -144,7 +209,7 @@ func vocabReviewSubmitHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.H
 
 		nextReview := result.NextReview.Format(time.RFC3339)
 
-		if err := db.UpdateReview(c.Request.Context(), database, wordID, uid,
+		if err := db.UpdateReview(c.Request.Context(), database, req.WordID, uid,
 			result.Repetitions, result.Interval, result.EaseFactor, nextReview); err != nil {
 			sugar.Errorw("update review", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal_error"})

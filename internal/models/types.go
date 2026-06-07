@@ -176,3 +176,9 @@ type DailyProgressEntry struct {
 type ProgressHistoryResponse struct {
 	Entries []DailyProgressEntry `json:"entries"`
 }
+
+type VocabListResponse struct {
+	Words    []VocabWord `json:"words"`
+	Total    int         `json:"total"`
+	DueCount int         `json:"due_count"`
+}

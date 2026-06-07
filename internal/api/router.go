@@ -11,7 +11,7 @@ import (
 	"github.com/lingvo-ai/lingvo/internal/middleware"
 )
 
-func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, botToken string, sugar *zap.SugaredLogger) {
+func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, openAIKey, openAIBaseURL, openAIModel, botToken string, sugar *zap.SugaredLogger) {
 	api := r.Group("/api")
 	api.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
@@ -23,7 +23,7 @@ func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, botToken string, suga
 	var aiClient *ai.Client
 	if geminiKey != "" {
 		var err error
-		aiClient, err = ai.NewClient(context.Background(), geminiKey)
+		aiClient, err = ai.NewClient(context.Background(), geminiKey, openAIKey, openAIBaseURL, openAIModel, sugar)
 		if err != nil {
 			sugar.Warnw("failed to init AI client, AI features disabled", "error", err)
 		} else {
@@ -38,13 +38,13 @@ func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, botToken string, suga
 	{
 		protected.POST("/chat", rateMw, chatHandler(db, aiClient, sugar))
 		protected.POST("/chat/stream", rateMw, chatStreamHandler(db, aiClient, sugar))
-		protected.POST("/grammar", grammarHandler(db, aiClient, sugar))
+		protected.POST("/grammar", rateMw, grammarHandler(db, aiClient, sugar))
 		protected.GET("/vocab", rateMw, vocabListHandler(db))
-		protected.POST("/vocab", vocabAddHandler(db, sugar))
+		protected.POST("/vocab", vocabAddHandler(db, aiClient, sugar))
 		protected.DELETE("/vocab/:id", vocabDeleteHandler(db, sugar))
 		protected.POST("/vocab/lookup", vocabLookupHandler(aiClient, sugar))
 		protected.GET("/vocab/review", vocabReviewHandler(db))
-		protected.POST("/vocab/review/:id", vocabReviewSubmitHandler(db, sugar))
+		protected.POST("/vocab/review", vocabReviewSubmitHandler(db, sugar))
 		protected.POST("/quiz", rateMw, quizHandler(db, aiClient, sugar))
 		protected.POST("/level", levelTestHandler(db, aiClient, sugar))
 		protected.POST("/level/save", levelSaveHandler(db))

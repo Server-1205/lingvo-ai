@@ -1,7 +1,7 @@
 # Lingvo AI — Technical Specification
 
 > AI English Tutor. Telegram Mini App. Uzbekistan → Central Asia.
-> Backend: Go. Frontend: React + Vite + Tailwind. AI: Gemini 2.0 Flash. DB: SQLite.
+> Backend: Go. Frontend: React + Vite. AI: Gemini 2.0 Flash (+ Flash-Lite, fallback GPT-4o-mini). DB: SQLite.
 
 ---
 
@@ -42,7 +42,7 @@
 │                                                               │
 │  ┌───────────────┐  ┌──────────────┐  ┌──────────────────┐  │
 │  │ Bot Layer      │  │ REST API     │  │ AI Layer          │  │
-│  │ webhook/poll   │  │ /api/*       │  │ gemini.Client     │  │
+│  │ long-polling   │  │ /api/*       │  │ gemini.Client     │  │
 │  │ commands       │  │ auth MW      │  │ prompts.go        │  │
 │  │ payments       │  │ ratelimit MW │  │ streaming         │  │
 │  └───────┬───────┘  └──────┬───────┘  └────────┬─────────┘  │
@@ -81,7 +81,7 @@
 3. Backend returns invoice link (Telegram Stars)
 4. Frontend opens link in Telegram (tg://)
 5. Telegram processes Stars payment (Apple/Google Pay)
-6. Telegram sends update to Bot webhook: successful_payment
+6. Bot receives successful_payment via long-polling
 7. Bot handler: save subscription to SQLite with expiry
 8. Bot sends confirmation message to user
 9. Next API call: middleware sees active subscription → no limit
@@ -108,7 +108,7 @@
 |---|---|
 | react, react-dom | UI framework |
 | vite | Bundler |
-| tailwindcss | CSS framework |
+| (plain CSS) | Styling (no framework) |
 | @telegram-apps/sdk | Telegram WebApp SDK |
 | react-i18next | Internationalization |
 | @tanstack/react-query | Server state / API calls |
@@ -120,7 +120,7 @@
 | Gemini 2.0 Flash | gemini-2.0-flash | $0.10/1M tok | $0.40/1M tok | Chat, grammar, lessons |
 | Gemini 2.0 Flash-Lite | gemini-2.0-flash-lite | $0.075/1M tok | $0.30/1M tok | Level test, quiz |
 
-Fallback: GPT-4o-mini if Gemini is unavailable.
+Fallback: OpenAI-compatible model (default GPT-4o-mini) if Gemini is unavailable. Configurable via OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL.
 
 ---
 
@@ -134,32 +134,35 @@ sinking/
 ├── internal/
 │   ├── bot/
 │   │   ├── bot.go                   # Init, long-polling
-│   │   ├── handlers.go              # /start, /help, /daily
-│   │   └── payments.go              # successful_payment handler
+│   │   ├── handlers.go              # /start, /help, /daily, /stats
+│   │   ├── payments.go              # successful_payment handler
+│   │   └── reminder.go              # Daily lesson reminders
 │   ├── api/
 │   │   ├── router.go                # Gin router + middleware
 │   │   ├── chat.go                  # POST /api/chat
-│   │   ├── grammar.go              # POST /api/grammar
-│   │   ├── vocab.go                 # POST /api/vocab
-│   │   ├── vocab_get.go            # GET /api/vocab
+│   │   ├── chat_stream.go           # POST /api/chat/stream (SSE)
+│   │   ├── grammar.go              # POST /api/grammar (+ vocab lookup)
+│   │   ├── vocab.go                 # POST/GET /api/vocab + review + delete
 │   │   ├── quiz.go                  # POST /api/quiz
-│   │   ├── level.go                 # POST /api/level
-│   │   ├── progress.go             # GET /api/progress
+│   │   ├── level.go                 # POST /api/level + /api/level/save
+│   │   ├── progress.go             # GET /api/progress + /api/progress/history
 │   │   ├── subscription.go         # GET /api/subscription
 │   │   └── invoice.go              # POST /api/create-invoice
 │   ├── ai/
-│   │   ├── gemini.go                # Gemini client wrapper
+│   │   ├── gemini.go                # Gemini client wrapper + fallback
+│   │   ├── openai.go                # OpenAI-compatible HTTP client
 │   │   ├── prompts.go               # System prompts (UZ, RU)
-│   │   └── response.go              # Response parsing
+│   │   ├── response.go              # Response parsing
+│   │   └── sm2.go                   # SM-2 spaced repetition algorithm
 │   ├── db/
-│   │   ├── db.go                    # Init SQLite
+│   │   ├── db.go                    # Init SQLite + schema migration
 │   │   ├── users.go                 # User CRUD
 │   │   ├── messages.go             # Message limit tracking
 │   │   ├── subscriptions.go        # Subscription CRUD
-│   │   ├── vocabulary.go           # Vocabulary CRUD
-│   │   └── progress.go             # Progress tracking
+│   │   ├── vocabulary.go           # Vocabulary CRUD + SM-2 review
+│   │   └── progress.go             # Progress tracking + streak
 │   ├── middleware/
-│   │   ├── auth.go                  # Telegram initData verify
+│   │   ├── auth.go                  # Telegram initData verify (HMAC-SHA256)
 │   │   └── ratelimit.go             # Daily message limit
 │   └── models/
 │       └── types.go                 # Shared structs
@@ -187,12 +190,27 @@ sinking/
 │   ├── vite.config.ts
 │   └── package.json
 ├── docs/
-│   └── PROMPTS.md
+│   ├── api.md                  # API Reference
+│   ├── configuration.md       # Environment variables
+│   ├── getting-started.md     # Setup guide
+│   └── streaming.md           # AI Streaming (SSE)
+├── .ai-factory/
+│   ├── DESCRIPTION.md         # Project description
+│   ├── ARCHITECTURE.md        # Architecture guidelines
+│   ├── plans/                 # Implementation plans
+│   │   └── sync-spec.md
+│   ├── rules/
+│   │   └── base.md            # Code conventions
+│   └── config.yaml            # AI Factory config
+├── .opencode/
+│   ├── agents/                # Subagent configs
+│   ├── skills/                # Custom skills
+│   └── memory/
+│       └── context.md         # Session context
 ├── AGENTS.md
 ├── ROADMAP.md
 ├── SPEC.md
 ├── go.mod
-├── Dockerfile
 ├── .env.example
 └── .gitignore
 ```
@@ -308,9 +326,14 @@ Response:
   "error": "daily_limit_exceeded",
   "message_uz": "Бугунги лимит тугади. Чексизга обуна бўлинг!",
   "message_ru": "Дневной лимит исчерпан. Оформите подписку!",
-  "premium_link": "tg://pay?invoice=abc"
+  "premium_link": "tg://resolve?domain=lingvo_ai_bot&appname=app"
 }
 ```
+
+#### POST /api/chat/stream
+SSE streaming chat. Same request as POST /api/chat. Response is a Server-Sent Events stream.
+
+See [docs/streaming.md](docs/streaming.md).
 
 #### POST /api/grammar
 Grammar check without dialogue.
@@ -320,7 +343,7 @@ Request: `{ "text": "He don't like coffee" }`
 Response: `{ "corrections": [...] }`
 
 #### POST /api/vocab
-Add word to dictionary.
+Add word to dictionary. AI generates translation, example, level automatically.
 
 Request: `{ "word": "ubiquitous" }`
 
@@ -329,33 +352,61 @@ Response:
 {
   "word": "ubiquitous",
   "translation_uz": "барча жойда учрайдиган",
-  "translation_ru": "вездесущий",
   "examples": ["Smartphones are ubiquitous these days."],
   "level": "b2"
 }
 ```
+
+#### POST /api/vocab/lookup
+Look up word without saving (can be used for preview).
+
+Request: `{ "word": "ubiquitous" }`
+
+Response: Same as POST /api/vocab.
 
 #### GET /api/vocab
 List user's words. Query: `?page=1&per_page=20&due_only=true`
 
 Response: `{ "words": [...], "total": 42, "due_count": 12 }`
 
+#### DELETE /api/vocab/:id
+Delete a word from vocabulary.
+
+#### GET /api/vocab/review
+Get due words for review (SM-2). Query: `?limit=10`
+
+Response: `[{ "id": 1, "word": "ubiquitous", "translation": "..." }]`
+
 #### POST /api/vocab/review
-Mark word review (SM-2). Request: `{ "word_id": 1, "quality": 4 }`
+Submit SM-2 review result. Request: `{ "word_id": 1, "quality": 4 }`
+
+Response: `{ "next_review": "2026-06-08T00:00:00Z", "interval": 6, "ease": 2.5 }`
 
 #### POST /api/quiz
-Generate quiz. Request: `{ "topic": "past_simple", "count": 5 }`
+Generate quiz (uses Gemini Flash-Lite). Request: `{ "topic": "past_simple", "count": 5 }`
 
 Response: `{ "questions": [{"question": "...", "options": [...], "correct": 1, "explanation_uz": "..."}] }`
 
 #### POST /api/level
-Determine level from test answers.
+Determine level (uses Gemini Flash-Lite). Request: `{ "answers": [...] }`
+
+Response: `{ "level": "a2", "score": 65, "total": 100 }`
+
+#### POST /api/level/save
+Save level test result. Request: `{ "level": "a2" }`
 
 #### GET /api/progress
 User stats. Streak, total messages, words, level.
 
+Response: `{ "level": "a2", "streak": 5, "total_messages": 42, "total_words": 30 }`
+
+#### GET /api/progress/history
+Daily progress history. Query: `?days=7`
+
 #### GET /api/subscription
 Subscription status.
+
+Response: `{ "is_premium": false, "plan": "", "expires_at": "" }`
 
 #### POST /api/create-invoice
 Create Stars invoice. Request: `{ "plan": "monthly" }`
@@ -408,22 +459,14 @@ Use `@telegram-apps/sdk` to get initData, expand app, detect theme.
 
 ### API client
 
-```typescript
-const BASE = import.meta.env.VITE_API_URL || '';
+See `web/src/api/client.ts`. Uses a shared `request<T>()` wrapper (not raw `fetch`) and `chatStream()` for SSE streaming.
 
-async function api<T>(path: string, body?: any): Promise<T> {
-  const initData = window.Telegram?.WebApp?.initData || '';
-  const res = await fetch(`${BASE}${path}`, {
-    method: body ? 'POST' : 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Telegram-Init-Data': initData,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) throw new Error((await res.json()).error);
-  return res.json();
-}
+```typescript
+// All API calls go through request() helper:
+async function request<T>(path: string, options?: RequestOptions): Promise<T>
+
+// Streaming:
+function chatStream(text: string, onToken: (t: string) => void, onDone: (r: AIResponse) => void, onError: (e: Error) => void): AbortController
 ```
 
 ---
@@ -433,9 +476,11 @@ async function api<T>(path: string, body?: any): Promise<T> {
 ### Gemini client wrapper (`internal/ai/gemini.go`)
 
 - Creates genai.Client with API key
-- Uses Gemini 2.0 Flash, temperature 0.4
+- Two models: Gemini 2.0 Flash (chat, grammar, vocab) and Gemini 2.0 Flash-Lite (quiz, level test), temperature 0.4
+- Fallback: OpenAI-compatible HTTP client (`openai.go`) on Gemini error
 - Builds prompts from `prompts.go`
 - Parses JSON response into ChatResponse struct
+- SM-2 algorithm (`sm2.go`) for spaced repetition scheduling
 
 ### Prompts (`internal/ai/prompts.go`)
 
@@ -448,6 +493,20 @@ You are an AI English tutor. Level: {level}. Lang: {uz|ru}.
 2. Return JSON: { reply, corrections: [{original, corrected, explanation_uz, explanation_ru, type}] }
 User message: {text}
 ```
+
+### SM-2 Algorithm (`internal/ai/sm2.go`)
+
+Implements the SM-2 spaced repetition algorithm for vocabulary review:
+- Quality rating: 0-5 (0=complete blackout, 5=perfect response)
+- Calculates next review date based on ease factor and interval
+- Updates ease factor: EF' = EF + (0.1 - (5-q) × (0.08 + (5-q) × 0.02))
+- Repetitions reset on quality < 3
+
+### Streaming (`internal/ai/gemini.go`)
+
+- ChatStream method returns `<-chan StreamEvent`
+- Events: EventToken (partial text), EventResult (final parsed response), EventError
+- Used by POST /api/chat/stream (SSE endpoint)
 
 ---
 
@@ -474,9 +533,9 @@ Earned Stars → Telegram Ads (30% bonus) → more users → more Stars.
 
 ### Backend translations
 
-Files: `internal/i18n/uz.json`, `internal/i18n/ru.json`
+Inline maps in Go code (no separate files). Strings: greetings, help text, plan names, stats messages.
 
-Strings: greetings, limit messages, error messages, plan names.
+Language detection: user.lang from DB → initData.language_code → default `uz`.
 
 ### Frontend translations
 
@@ -494,11 +553,18 @@ Strings: all UI text (nav, buttons, labels, placeholders).
 
 ## 11. Deployment
 
-### Dockerfile (multi-stage)
+### Build
 
-- Stage 1: Node 20 → build React
-- Stage 2: Golang 1.23 → build Go binary
-- Stage 3: Debian slim → copy binary + web/dist + schema.sql
+```bash
+# Backend
+go build -o server ./cmd/server
+
+# Frontend
+cd web && pnpm build
+
+# Run
+./server  # or: go run ./cmd/server
+```
 
 ### Environment variables
 
@@ -509,11 +575,14 @@ DATABASE_PATH=/data/lingvo.db
 PORT=8080
 WEBAPP_URL=https://lingvo-ai-production.up.railway.app
 ADMIN_IDS=123,456
+OPENAI_API_KEY=                       # optional, for AI fallback
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4o-mini
 ```
 
 ### Platform
 
-Railway.app (free tier: $5 credit/month). Dockerfile deploy.
+Railway.app (free tier: $5 credit/month). Go binary + frontend static files.
 
 ---
 
@@ -524,33 +593,35 @@ Railway.app (free tier: $5 credit/month). Dockerfile deploy.
 | Code | Body error | Cause |
 |---|---|---|
 | 400 | invalid_request | Missing field |
+| 400 | invalid_plan | Unknown subscription plan |
 | 401 | unauthorized | Bad initData |
-| 429 | daily_limit_exceeded | Free limit hit |
-| 500 | ai_service_unavailable | Gemini down |
+| 429 | daily_limit_exceeded | Free limit hit (includes premium_link) |
+| 500 | ai_service_unavailable | AI service down |
 | 500 | internal_error | DB/unknown |
+| 503 | ai_service_unavailable | AI client not configured |
 
 ### Logging
 
-Use `go.uber.org/zap` for structured logs. Log request IDs, telegram IDs, error details.
+Use `go.uber.org/zap` for structured logs. Log telegram IDs, error details, AI fallback usage.
 
 ### Graceful shutdown
 
-Handle SIGINT/SIGTERM with `signal.NotifyContext`.
+Handle SIGINT/SIGTERM — currently not implemented.
 
 ---
 
 ## 13. Security
 
-- Verify Telegram initData HMAC-SHA256 on every request
-- Bot token, Gemini key, DB path — env only, never in code
+- Verify Telegram initData HMAC-SHA256 on every request (`internal/middleware/auth.go`)
+- Bot token, Gemini key, OpenAI key, DB path — env only, never in code
 - No passwords, no sessions (Telegram handles auth)
-- Rate limit: 100 req/s global, 10 msgs/day per free user
+- Rate limit: 10 msgs/day per free user, unlimited for premium
 
 ---
 
 ## 14. Testing Strategy
 
-- Go unit tests for: prompt building, hash verification, rate limit logic
+- Go unit tests for: SM-2 algorithm (sm2_test.go), prompt building, hash verification, rate limit logic, chat streaming
 - Frontend tests with Vitest: chat rendering, limit display, subscription flow
 - Manual checklist: registration, limit, payment, vocab CRUD, progress
 

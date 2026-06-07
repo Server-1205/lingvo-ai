@@ -68,9 +68,6 @@ export interface VocabLookupResponse {
 
 export interface AddVocabRequest {
   word: string;
-  translation: string;
-  example: string;
-  level?: string;
 }
 
 export interface GrammarRequest {
@@ -196,12 +193,18 @@ export async function createInvoice(req: InvoiceRequest): Promise<InvoiceRespons
   });
 }
 
-export async function getVocab(): Promise<VocabWord[]> {
-  return request<VocabWord[]>('/api/vocab');
+export interface VocabListResponse {
+  words: VocabWord[];
+  total: number;
+  due_count: number;
 }
 
-export async function addVocab(req: AddVocabRequest): Promise<{ status: string }> {
-  return request<{ status: string }>('/api/vocab', {
+export async function getVocab(): Promise<VocabListResponse> {
+  return request<VocabListResponse>('/api/vocab');
+}
+
+export async function addVocab(req: AddVocabRequest): Promise<VocabLookupResponse> {
+  return request<VocabLookupResponse>('/api/vocab', {
     method: 'POST',
     body: JSON.stringify(req),
   });
@@ -360,9 +363,9 @@ export async function getDueWords(limit?: number): Promise<VocabWord[]> {
 }
 
 export async function submitReview(wordId: number, quality: number): Promise<ReviewResponse> {
-  return request<ReviewResponse>(`/api/vocab/review/${wordId}`, {
+  return request<ReviewResponse>('/api/vocab/review', {
     method: 'POST',
-    body: JSON.stringify({ quality }),
+    body: JSON.stringify({ word_id: wordId, quality }),
   });
 }
 

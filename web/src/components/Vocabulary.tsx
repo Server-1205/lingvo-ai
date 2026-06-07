@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getVocab, addVocab, deleteVocab, lookupVocab, getDueWords, submitReview } from '../api/client';
-import type { VocabWord, VocabLookupResponse } from '../api/client';
+import { getVocab, addVocab, deleteVocab, getDueWords, submitReview } from '../api/client';
+import type { VocabWord } from '../api/client';
 import { ReviewCard } from './ReviewCard';
 
 interface VocabularyProps {
@@ -15,16 +15,13 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
   const [tab, setTab] = useState<'my' | 'lookup' | 'review'>(initialTab || 'my');
   const [reviewIndex, setReviewIndex] = useState(0);
   const [lookupWord, setLookupWord] = useState('');
-  const [showAdd, setShowAdd] = useState<VocabLookupResponse | null>(null);
-  const [addWord, setAddWord] = useState('');
-  const [addTranslation, setAddTranslation] = useState('');
-  const [addExample, setAddExample] = useState('');
-  const [addLevel, setAddLevel] = useState('a1');
+  const [addedWord, setAddedWord] = useState<string | null>(null);
 
-  const { data: words, isLoading } = useQuery({
+  const { data: vocabResp, isLoading } = useQuery({
     queryKey: ['vocab'],
     queryFn: getVocab,
   });
+  const words = vocabResp?.words ?? [];
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteVocab(id),
@@ -32,25 +29,11 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
   });
 
   const addMutation = useMutation({
-    mutationFn: () => addVocab({ word: addWord, translation: addTranslation, example: addExample, level: addLevel }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vocab'] });
-      setShowAdd(null);
-      setAddWord('');
-      setAddTranslation('');
-      setAddExample('');
-      setAddLevel('a1');
-    },
-  });
-
-  const lookupMutation = useMutation({
-    mutationFn: () => lookupVocab({ word: lookupWord }),
+    mutationFn: () => addVocab({ word: lookupWord }),
     onSuccess: (data) => {
-      setShowAdd(data);
-      setAddWord(lookupWord);
-      setAddTranslation(data.translation_uz);
-      setAddExample(data.examples?.[0] || '');
-      setAddLevel(data.level || 'a1');
+      queryClient.invalidateQueries({ queryKey: ['vocab'] });
+      setAddedWord(`${lookupWord} — ${data.translation_uz}`);
+      setLookupWord('');
     },
   });
 
@@ -67,7 +50,6 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
     },
   });
 
-  const list = words ?? [];
   const dueList = dueWords ?? [];
 
   return (
@@ -123,14 +105,14 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
             </div>
           )}
 
-          {!isLoading && list.length === 0 && (
+          {!isLoading && words.length === 0 && (
             <div className="placeholder">
               <div className="placeholder-icon">📚</div>
               <div>{t('vocab.empty')}</div>
             </div>
           )}
 
-          {list.map((w: VocabWord) => (
+          {words.map((w: VocabWord) => (
             <div key={w.id} className="card" style={{ margin: '8px 16px', padding: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                 <div>
@@ -206,7 +188,7 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <input
               value={lookupWord}
-              onChange={e => setLookupWord(e.target.value)}
+              onChange={e => { setLookupWord(e.target.value); setAddedWord(null); }}
               placeholder={t('vocab.lookup_placeholder')}
               style={{
                 flex: 1,
@@ -222,81 +204,29 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
             <button
               className="btn btn-primary"
               style={{ padding: '10px 16px' }}
-              onClick={() => lookupMutation.mutate()}
-              disabled={!lookupWord.trim() || lookupMutation.isPending}
+              onClick={() => addMutation.mutate()}
+              disabled={!lookupWord.trim() || addMutation.isPending}
             >
-              {t('vocab.lookup_btn')}
+              {t('vocab.save_word')}
             </button>
           </div>
 
-          {lookupMutation.isPending && (
+          {addMutation.isPending && (
             <div className="placeholder">
               <div className="placeholder-icon">⏳</div>
               <div>{t('common.loading')}</div>
             </div>
           )}
 
-          {showAdd && (
-            <div className="card" style={{ padding: 16 }}>
-              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>
-                {lookupWord}
+          {addedWord && !addMutation.isPending && (
+            <div className="card" style={{ padding: 16, textAlign: 'center' }}>
+              <div style={{ fontSize: 24, marginBottom: 8 }}>✅</div>
+              <div style={{ fontSize: 14, color: '#4caf50', fontWeight: 600 }}>
+                {t('vocab.saved')}
               </div>
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 12, color: 'var(--tg-hint)', marginBottom: 2 }}>{t('vocab.translation')}</div>
-                <div style={{ fontSize: 14 }}>{showAdd.translation_uz}</div>
+              <div style={{ fontSize: 13, color: 'var(--tg-hint)', marginTop: 4 }}>
+                {addedWord}
               </div>
-              {showAdd.examples?.length > 0 && (
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 12, color: 'var(--tg-hint)', marginBottom: 2 }}>{t('vocab.example')}</div>
-                  <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13 }}>
-                    {showAdd.examples.map((ex, i) => (
-                      <li key={i} style={{ marginBottom: 4 }}>{ex}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12, color: 'var(--tg-hint)', marginBottom: 2 }}>{t('vocab.level')}</div>
-                <span style={{ fontSize: 12, background: 'var(--tg-secondary-bg)', padding: '2px 6px', borderRadius: 4 }}>
-                  {showAdd.level?.toUpperCase()}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-                <input
-                  value={addWord}
-                  onChange={e => setAddWord(e.target.value)}
-                  placeholder={t('vocab.word_label')}
-                  style={{ padding: '8px 12px', border: '1px solid var(--tg-border)', borderRadius: 8, background: 'var(--tg-secondary-bg)', color: 'var(--tg-text)', fontSize: 14, outline: 'none' }}
-                />
-                <input
-                  value={addTranslation}
-                  onChange={e => setAddTranslation(e.target.value)}
-                  placeholder={t('vocab.translation_label')}
-                  style={{ padding: '8px 12px', border: '1px solid var(--tg-border)', borderRadius: 8, background: 'var(--tg-secondary-bg)', color: 'var(--tg-text)', fontSize: 14, outline: 'none' }}
-                />
-                <input
-                  value={addExample}
-                  onChange={e => setAddExample(e.target.value)}
-                  placeholder={t('vocab.example_label')}
-                  style={{ padding: '8px 12px', border: '1px solid var(--tg-border)', borderRadius: 8, background: 'var(--tg-secondary-bg)', color: 'var(--tg-text)', fontSize: 14, outline: 'none' }}
-                />
-              </div>
-
-              <button
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-                onClick={() => addMutation.mutate()}
-                disabled={addMutation.isPending}
-              >
-                {t('vocab.save_word')}
-              </button>
-
-              {addMutation.isSuccess && (
-                <div style={{ fontSize: 13, color: '#4caf50', marginTop: 8, textAlign: 'center' }}>
-                  {t('vocab.saved')}
-                </div>
-              )}
             </div>
           )}
         </div>

@@ -42,14 +42,15 @@ func RateLimitMiddleware(database *sqlx.DB) gin.HandlerFunc {
 
 		limit := 10
 		if count >= limit {
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"error":       "daily_limit_exceeded",
-				"message_uz":  "Бугунги лимит тугади. Чексизга обуна бўлинг!",
-				"message_ru":  "Дневной лимит исчерпан. Оформите подписку!",
-				"daily_used":  count,
-				"daily_limit": limit,
-				"is_premium":  false,
-			})
+		c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
+			"error":        "daily_limit_exceeded",
+			"message_uz":   "Бугунги лимит тугади. Чексизга обуна бўлинг!",
+			"message_ru":   "Дневной лимит исчерпан. Оформите подписку!",
+			"daily_used":   count,
+			"daily_limit":  limit,
+			"is_premium":   false,
+			"premium_link": "https://t.me/lingvo_ai_bot/app",
+		})
 			return
 		}
 
