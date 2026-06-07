@@ -25,11 +25,10 @@ func Migrate(db *sqlx.DB, sugar *zap.SugaredLogger) {
 			continue
 		}
 		if _, err := db.Exec(stmt); err != nil {
-			// ALTER TABLE ADD COLUMN may fail if column already exists — ignore
 			if strings.HasPrefix(stmt, "ALTER TABLE") {
-				sugar.Warnw("migration skipped (column may already exist)", "stmt", stmt[:60], "error", err)
+				sugar.Warnw("migration skipped (column may already exist)", "stmt", stmt, "error", err)
 			} else {
-				sugar.Fatalw("exec schema", "stmt", stmt[:60], "error", err)
+				sugar.Fatalw("exec schema", "stmt", stmt, "error", err)
 			}
 		}
 	}

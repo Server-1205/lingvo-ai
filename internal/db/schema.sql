@@ -59,7 +59,6 @@ CREATE INDEX IF NOT EXISTS idx_messages_user_date ON messages(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_vocab_user ON vocabulary(user_id);
 CREATE INDEX IF NOT EXISTS idx_progress_user_date ON daily_progress(user_id, date);
 
--- Migrations for existing databases
 ALTER TABLE vocabulary ADD COLUMN ease_factor REAL DEFAULT 2.5;
 ALTER TABLE vocabulary ADD COLUMN interval INTEGER DEFAULT 0;
 ALTER TABLE vocabulary ADD COLUMN last_reviewed_at DATETIME;
