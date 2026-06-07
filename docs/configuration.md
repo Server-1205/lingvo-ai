@@ -17,6 +17,7 @@
 | `OPENAI_API_KEY` | Нет | — | API ключ для fallback (OpenAI-совместимый) |
 | `OPENAI_BASE_URL` | Нет | `https://api.openai.com/v1` | Базовый URL для fallback API (DeepSeek, Groq и т.д.) |
 | `OPENAI_MODEL` | Нет | `gpt-4o-mini` | Модель для fallback |
+| `AI_QUEUE_ENABLED` | Нет | — | Включить приоритетную очередь AI (premium → free) |
 
 ## Файл .env
 

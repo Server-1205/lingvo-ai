@@ -25,7 +25,8 @@ data: {"type":"token","data":"Hello"}
 data: {"type":"token","data":"! I"}
 data: {"type":"token","data":"'m doing great!"}
 data: {"type":"corrections","data":[{"original":"im","corrected":"I'm","explanation_uz":"...","explanation_ru":"...","type":"grammar"}]}
-data: {"type":"usage","data":{"daily_used":1,"daily_limit":10,"is_premium":false}}
+data: {"type":"premium_analysis","data":{"overall_grade":"B","strengths":[...],"areas_for_improvement":[...],"suggested_topic":"..."}}
+data: {"type":"usage","data":{"daily_used":1,"daily_limit":10,"is_premium":true}}
 data: {"type":"done"}
 ```
 
@@ -35,6 +36,7 @@ data: {"type":"done"}
 |------|---------|-------------|
 | `token` | `string` | Partial text chunk from Gemini |
 | `corrections` | `Correction[]` | Grammar/vocabulary corrections (sent once) |
+| `premium_analysis` | `PremiumAnalysis` | Deep analysis for premium users (grade, strengths, topics) |
 | `usage` | `Usage` | Updated daily usage info |
 | `done` | *(none)* | Signals stream completion |
 
