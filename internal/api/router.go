@@ -11,7 +11,7 @@ import (
 	"github.com/lingvo-ai/lingvo/internal/middleware"
 )
 
-func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, openAIKey, openAIBaseURL, openAIModel, botToken string, sugar *zap.SugaredLogger) {
+func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, openAIKey, openAIBaseURL, openAIModel, botToken string, sugar *zap.SugaredLogger, aiQueueEnabled bool) {
 	api := r.Group("/api")
 	api.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
@@ -28,6 +28,10 @@ func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, openAIKey, openAIBase
 			sugar.Warnw("failed to init AI client, AI features disabled", "error", err)
 		} else {
 			sugar.Info("AI client initialized")
+			if aiQueueEnabled {
+				aiClient.EnableQueue(context.Background(), sugar)
+				sugar.Info("AI priority queue enabled")
+			}
 		}
 	} else {
 		sugar.Warn("GEMINI_API_KEY not set, AI features disabled")
@@ -43,6 +47,7 @@ func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, openAIKey, openAIBase
 		protected.POST("/vocab", vocabAddHandler(db, aiClient, sugar))
 		protected.DELETE("/vocab/:id", vocabDeleteHandler(db, sugar))
 		protected.POST("/vocab/lookup", vocabLookupHandler(aiClient, sugar))
+		protected.GET("/vocab/export", vocabExportHandler(db, sugar))
 		protected.GET("/vocab/review", vocabReviewHandler(db))
 		protected.POST("/vocab/review", vocabReviewSubmitHandler(db, sugar))
 		protected.POST("/quiz", rateMw, quizHandler(db, aiClient, sugar))

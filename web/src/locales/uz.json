@@ -63,5 +63,15 @@
   "vocab.review_easy": "Осон",
   "vocab.review_progress": "{current}/{total}",
   "vocab.review_done": "Бугунги такрорлаш тугади!",
-  "vocab.review_empty": "Такрорлаш учун сўз йўқ"
+  "vocab.review_empty": "Такрорлаш учун сўз йўқ",
+  "premium.overall_grade": "Umumiy baho",
+  "premium.strengths": "Kuchli tomonlar",
+  "premium.areas_to_improve": "Ustida ishlash",
+  "premium.suggested_topic": "Tavsiya etilgan mavzu",
+  "premium.severity_critical": "Tanqidiy",
+  "premium.severity_major": "Muhim",
+  "premium.severity_minor": "Kichik",
+  "premium.learning_tip": "Maslahat",
+  "premium.export_vocab": "CSV eksport",
+  "premium.export_success": "Yuklab olish boshlandi"
 }

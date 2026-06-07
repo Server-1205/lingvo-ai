@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { chatStream } from '../api/client';
-import type { Correction, Usage } from '../api/client';
+import type { Correction, PremiumAnalysis, Usage } from '../api/client';
 import { GrammarBlock } from './GrammarBlock';
+import { PremiumCorrectionBlock } from './PremiumCorrectionBlock';
 import { UsageIndicator } from './UsageIndicator';
 
 interface Message {
   role: 'user' | 'ai';
   text: string;
   corrections?: Correction[];
+  premiumAnalysis?: PremiumAnalysis;
 }
 
 interface ChatProps {
@@ -67,9 +69,20 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
         },
         (newUsage) => {
           setUsage(newUsage);
+          console.debug('[chat] premium path:', newUsage.is_premium);
         },
         () => {
           setIsStreaming(false);
+        },
+        (analysis) => {
+          setMessages(prev => {
+            const next = [...prev];
+            if (next[aiIndex]) {
+              next[aiIndex] = { ...next[aiIndex], premiumAnalysis: analysis };
+            }
+            return next;
+          });
+          console.debug('[chat] premium analysis received', analysis);
         },
       );
     } catch (err) {
@@ -111,7 +124,14 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
               </div>
             </div>
             {msg.role === 'ai' && msg.corrections && msg.corrections.length > 0 && (
-              <GrammarBlock corrections={msg.corrections} />
+              msg.premiumAnalysis ? (
+                <PremiumCorrectionBlock
+                  corrections={msg.corrections}
+                  analysis={msg.premiumAnalysis}
+                />
+              ) : (
+                <GrammarBlock corrections={msg.corrections} />
+              )
             )}
           </div>
         ))}

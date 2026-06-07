@@ -40,13 +40,50 @@ func chatHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLogge
 		limit, _ := dailyLimit.(int)
 		premium, _ := isPremium.(bool)
 
-		prompt := ai.BuildChatPrompt(lvl, lng, req.Text)
+		var prompt string
+		if premium {
+			prompt = ai.BuildPremiumChatPrompt(lvl, lng, req.Text)
+			sugar.Infow("premium chat", "user_id", uid)
+		} else {
+			prompt = ai.BuildChatPrompt(lvl, lng, req.Text)
+		}
 
-		aiResp, err := aiClient.Chat(c.Request.Context(), prompt)
-		if err != nil {
-			sugar.Errorw("ai chat error", "error", err, "telegram_id", c.GetInt64("telegram_id"))
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "ai_service_unavailable"})
-			return
+		var aiResp *models.AIResponse
+		if aiClient.IsQueueEnabled() {
+			resultCh := make(chan string, 1)
+			errCh := make(chan error, 1)
+			priority := ai.PriorityNormal
+			if premium {
+				priority = ai.PriorityPremium
+			}
+			req := &ai.AIRequest{
+				Priority: priority,
+				Prompt:   prompt,
+				ResultCh: resultCh,
+				ErrorCh:  errCh,
+				Ctx:      c.Request.Context(),
+			}
+			aiClient.EnqueueAI(req)
+
+			select {
+			case result := <-resultCh:
+				aiResp, _ = ai.ParseAIResponse(result)
+			case err := <-errCh:
+				sugar.Errorw("ai queue error", "error", err, "telegram_id", c.GetInt64("telegram_id"))
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "ai_service_unavailable"})
+				return
+			case <-c.Request.Context().Done():
+				c.JSON(http.StatusRequestTimeout, gin.H{"error": "request_timeout"})
+				return
+			}
+		} else {
+			var err error
+			aiResp, err = aiClient.Chat(c.Request.Context(), prompt)
+			if err != nil {
+				sugar.Errorw("ai chat error", "error", err, "telegram_id", c.GetInt64("telegram_id"))
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "ai_service_unavailable"})
+				return
+			}
 		}
 
 		today := time.Now().UTC().Format("2006-01-02")
@@ -56,30 +93,28 @@ func chatHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLogge
 
 		var corrections []models.Correction
 		if aiResp != nil && aiResp.Corrections != nil {
-			for _, cr := range aiResp.Corrections {
-				corrections = append(corrections, models.Correction{
-					Original:      cr.Original,
-					Corrected:     cr.Corrected,
-					ExplanationUz: cr.ExplanationUz,
-					ExplanationRu: cr.ExplanationRu,
-					Type:          cr.Type,
-				})
-			}
+			corrections = aiResp.Corrections
 		}
 
 		reply := ""
+		var premiumAnalysis *models.PremiumAnalysis
 		if aiResp != nil {
 			reply = aiResp.Reply
+			premiumAnalysis = aiResp.PremiumAnalysis
+			if premium && premiumAnalysis != nil {
+				sugar.Debugw("premium analysis parsed", "grade", premiumAnalysis.OverallGrade)
+			}
 		}
 
 		c.JSON(http.StatusOK, models.ChatResponse{
-			Reply:       reply,
-			Corrections: corrections,
+			Reply:           reply,
+			Corrections:     corrections,
 			Usage: models.Usage{
 				DailyUsed:  used + 1,
 				DailyLimit: limit,
 				IsPremium:  premium,
 			},
+			PremiumAnalysis: premiumAnalysis,
 		})
 	}
 }

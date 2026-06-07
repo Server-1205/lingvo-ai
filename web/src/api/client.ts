@@ -12,6 +12,17 @@ export interface Correction {
   explanation_uz: string;
   explanation_ru: string;
   type: string;
+  severity?: string;
+  category?: string;
+  learning_tip?: string;
+  rule_violated?: string;
+}
+
+export interface PremiumAnalysis {
+  overall_grade: string;
+  strengths: string[];
+  areas_for_improvement: string[];
+  suggested_topic: string;
 }
 
 export interface Usage {
@@ -24,6 +35,7 @@ export interface ChatResponse {
   reply: string;
   corrections: Correction[];
   usage: Usage;
+  premium_analysis?: PremiumAnalysis;
 }
 
 export interface SubscriptionResponse {
@@ -253,7 +265,7 @@ export async function saveLevel(req: LevelSaveRequest): Promise<{ status: string
 }
 
 export interface SSEEvent {
-  type: 'token' | 'corrections' | 'usage' | 'done';
+  type: 'token' | 'corrections' | 'usage' | 'done' | 'premium_analysis';
   data?: unknown;
 }
 
@@ -263,6 +275,7 @@ export async function chatStream(
   onCorrections: (corrections: Correction[]) => void,
   onUsage: (usage: Usage) => void,
   onDone: () => void,
+  onPremiumAnalysis?: (analysis: PremiumAnalysis) => void,
 ): Promise<void> {
   const initDataRaw = initData.raw();
   const headers: Record<string, string> = {
@@ -330,6 +343,11 @@ export async function chatStream(
           break;
         case 'usage':
           onUsage(evt.data as Usage);
+          break;
+        case 'premium_analysis':
+          if (onPremiumAnalysis) {
+            onPremiumAnalysis(evt.data as PremiumAnalysis);
+          }
           break;
         case 'done':
           onDone();

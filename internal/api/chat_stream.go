@@ -47,7 +47,13 @@ func chatStreamHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.Sugare
 		limit, _ := dailyLimit.(int)
 		premium, _ := isPremium.(bool)
 
-		prompt := ai.BuildChatPrompt(lvl, lng, req.Text)
+		var prompt string
+		if premium {
+			prompt = ai.BuildPremiumChatPrompt(lvl, lng, req.Text)
+			sugar.Infow("premium streaming chat", "user_id", uid)
+		} else {
+			prompt = ai.BuildChatPrompt(lvl, lng, req.Text)
+		}
 
 		c.Writer.Header().Set("Content-Type", "text/event-stream")
 		c.Writer.Header().Set("Cache-Control", "no-cache")
@@ -55,37 +61,70 @@ func chatStreamHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.Sugare
 
 		sugar.Infow("streaming session started", "user_id", uid)
 
-		streamCh := aiClient.ChatStream(c.Request.Context(), prompt)
-
 		var finalResult *models.AIResponse
 
-	loop:
-		for {
+		if aiClient.IsQueueEnabled() {
+			resultCh := make(chan string, 1)
+			errCh := make(chan error, 1)
+			priority := ai.PriorityNormal
+			if premium {
+				priority = ai.PriorityPremium
+			}
+			req := &ai.AIRequest{
+				Priority: priority,
+				Prompt:   prompt,
+				ResultCh: resultCh,
+				ErrorCh:  errCh,
+				Ctx:      c.Request.Context(),
+			}
+			aiClient.EnqueueAI(req)
+
 			select {
-			case evt, ok := <-streamCh:
-				if !ok {
-					break loop
-				}
-				switch evt.Type {
-				case ai.EventToken:
-					var token string
-					if err := json.Unmarshal(evt.Data, &token); err != nil {
-						sugar.Errorw("failed to unmarshal token", "error", err)
-						continue
-					}
-					sugar.Debugw("streaming token", "user_id", uid, "len", len(token))
-					writeSSE(c, sseEvent{Type: "token", Data: token})
-				case ai.EventResult:
-					var result models.AIResponse
-					if err := json.Unmarshal(evt.Data, &result); err != nil {
-						sugar.Errorw("failed to unmarshal result", "error", err)
-						continue
-					}
-					finalResult = &result
-				}
+			case result := <-resultCh:
+				writeSSE(c, sseEvent{Type: "token", Data: result})
+				parsed, _ := ai.ParseAIResponse(result)
+				finalResult = parsed
+			case err := <-errCh:
+				sugar.Errorw("ai queue error", "error", err, "telegram_id", c.GetInt64("telegram_id"))
+				writeSSE(c, sseEvent{Type: "error", Data: "ai_service_unavailable"})
+				writeSSE(c, sseEvent{Type: "done"})
+				return
 			case <-c.Request.Context().Done():
 				sugar.Warnw("client disconnected", "user_id", uid)
+				writeSSE(c, sseEvent{Type: "done"})
 				return
+			}
+		} else {
+			streamCh := aiClient.ChatStream(c.Request.Context(), prompt)
+
+		loop:
+			for {
+				select {
+				case evt, ok := <-streamCh:
+					if !ok {
+						break loop
+					}
+					switch evt.Type {
+					case ai.EventToken:
+						var token string
+						if err := json.Unmarshal(evt.Data, &token); err != nil {
+							sugar.Errorw("failed to unmarshal token", "error", err)
+							continue
+						}
+						sugar.Debugw("streaming token", "user_id", uid, "len", len(token))
+						writeSSE(c, sseEvent{Type: "token", Data: token})
+					case ai.EventResult:
+						var result models.AIResponse
+						if err := json.Unmarshal(evt.Data, &result); err != nil {
+							sugar.Errorw("failed to unmarshal result", "error", err)
+							continue
+						}
+						finalResult = &result
+					}
+				case <-c.Request.Context().Done():
+					sugar.Warnw("client disconnected", "user_id", uid)
+					return
+				}
 			}
 		}
 
@@ -95,19 +134,21 @@ func chatStreamHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.Sugare
 		}
 
 		var corrections []models.Correction
-		if finalResult != nil && finalResult.Corrections != nil {
-			for _, cr := range finalResult.Corrections {
-				corrections = append(corrections, models.Correction{
-					Original:      cr.Original,
-					Corrected:     cr.Corrected,
-					ExplanationUz: cr.ExplanationUz,
-					ExplanationRu: cr.ExplanationRu,
-					Type:          cr.Type,
-				})
+		var premiumAnalysis *models.PremiumAnalysis
+		if finalResult != nil {
+			if finalResult.Corrections != nil {
+				corrections = finalResult.Corrections
+			}
+			premiumAnalysis = finalResult.PremiumAnalysis
+			if premium && premiumAnalysis != nil {
+				sugar.Debugw("premium analysis parsed via stream", "grade", premiumAnalysis.OverallGrade)
 			}
 		}
 
 		writeSSE(c, sseEvent{Type: "corrections", Data: corrections})
+		if premiumAnalysis != nil {
+			writeSSE(c, sseEvent{Type: "premium_analysis", Data: premiumAnalysis})
+		}
 		writeSSE(c, sseEvent{
 			Type: "usage",
 			Data: models.Usage{

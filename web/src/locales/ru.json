@@ -63,5 +63,15 @@
   "vocab.review_easy": "Легко",
   "vocab.review_progress": "{current}/{total}",
   "vocab.review_done": "На сегодня всё!",
-  "vocab.review_empty": "Нет слов для повторения"
+  "vocab.review_empty": "Нет слов для повторения",
+  "premium.overall_grade": "Общая оценка",
+  "premium.strengths": "Сильные стороны",
+  "premium.areas_to_improve": "Над чем работать",
+  "premium.suggested_topic": "Рекомендуемая тема",
+  "premium.severity_critical": "Критическая",
+  "premium.severity_major": "Важная",
+  "premium.severity_minor": "Незначительная",
+  "premium.learning_tip": "Совет",
+  "premium.export_vocab": "Экспорт CSV",
+  "premium.export_success": "Скачивание началось"
 }
