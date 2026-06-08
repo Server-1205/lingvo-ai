@@ -1,9 +1,12 @@
 package bot
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"time"
 
@@ -11,6 +14,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 
+	"github.com/lingvo-ai/lingvo/internal/ai"
 	"github.com/lingvo-ai/lingvo/internal/db"
 	"github.com/lingvo-ai/lingvo/internal/models"
 )
@@ -51,7 +55,7 @@ func helpText(lang string) string {
 	return msgs["uz"]
 }
 
-func handleCommand(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger, update tgbotapi.Update) {
+func handleCommand(bot *tgbotapi.BotAPI, database *sqlx.DB, webappURL string, sugar *zap.SugaredLogger, update tgbotapi.Update, aiClient *ai.Client) {
 	if update.Message == nil || !update.Message.IsCommand() {
 		return
 	}
@@ -78,12 +82,15 @@ func handleCommand(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLo
 		}
 		sugar.Infow("new user", "telegram_id", telegramID, "username", username)
 
-		msg := tgbotapi.NewMessage(chatID, welcomeText(lang))
-		msg.ParseMode = "Markdown"
-		msg.ReplyMarkup = launchKeyboard(chatID, lang)
-		if _, err := bot.Send(msg); err != nil {
-			sugar.Errorw("send start message", "error", err)
+		labels := map[string]string{
+			"uz": "🚀 Lingvo AI ни ишга тушириш",
+			"ru": "🚀 Запустить Lingvo AI",
 		}
+		btnLabel := labels["uz"]
+		if l, ok := labels[lang]; ok {
+			btnLabel = l
+		}
+		sendWebAppMessage(chatID, welcomeText(lang), btnLabel, webappURL, sugar, "Markdown")
 
 	case "help":
 		msg := tgbotapi.NewMessage(chatID, helpText(lang))
@@ -93,7 +100,7 @@ func handleCommand(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLo
 		}
 
 	case "daily":
-		handleDaily(bot, database, sugar, chatID, telegramID, lang)
+		handleDaily(bot, database, webappURL, sugar, chatID, telegramID, lang, aiClient)
 
 	case "stats":
 		handleStats(bot, database, sugar, chatID, telegramID, lang)
@@ -106,68 +113,30 @@ func handleCommand(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLo
 	}
 }
 
-func handleDaily(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger, chatID int64, telegramID int64, lang string) {
-	user, err := db.GetUserByTelegramID(context.Background(), database, telegramID)
-	if err != nil {
-		sugar.Errorw("get user for daily", "error", err, "telegram_id", telegramID)
-		sendMessage(bot, chatID, "Xatolik yuz berdi. / Ошибка.")
-		return
+func handleDaily(bot *tgbotapi.BotAPI, database *sqlx.DB, webappURL string, sugar *zap.SugaredLogger, chatID int64, telegramID int64, lang string, aiClient *ai.Client) {
+	dailyMsgs := map[string]string{
+		"uz": "📅 *Kunlik dars*\n\nYangi mavzuni o'rganish va mashqlarni bajarish uchun quyidagi tugmani bosing:",
+		"ru": "📅 *Урок дня*\n\nНажмите кнопку ниже, чтобы изучить новую тему и выполнить упражнения:",
+	}
+	msgText := dailyMsgs["uz"]
+	if m, ok := dailyMsgs[lang]; ok {
+		msgText = m
 	}
 
-	dueCount, err := db.GetDueWordCount(context.Background(), database, user.ID)
-	if err != nil {
-		sugar.Errorw("get due count for daily", "error", err, "user_id", user.ID)
-		dueCount = 0
-	}
-
-	sugar.Debugw("daily check", "user_id", user.ID, "due", dueCount)
-
-	var msgText string
-	if dueCount > 0 {
-		dueMsgs := map[string]string{
-			"uz": fmt.Sprintf("📅 *Bugungi dars*\n\n"+
-				"Daraja: *%s*\n"+
-				"📚 Takrorlash uchun *%d* ta so'z bor.\n\n"+
-				"Quyidagi tugma orqali boshlang:", strings.ToUpper(user.Level), dueCount),
-			"ru": fmt.Sprintf("📅 *Урок дня*\n\n"+
-				"Уровень: *%s*\n"+
-				"📚 Слов для повторения: *%d*\n\n"+
-				"Начните прямо сейчас:", strings.ToUpper(user.Level), dueCount),
-		}
-		msgText = dueMsgs["uz"]
-		if m, ok := dueMsgs[lang]; ok {
-			msgText = m
-		}
-
-		msg := tgbotapi.NewMessage(chatID, msgText)
-		msg.ParseMode = "Markdown"
-		msg.ReplyMarkup = reviewButton(lang)
-		if _, err := bot.Send(msg); err != nil {
-			sugar.Errorw("send daily message with review", "error", err)
-		}
+	dailyURL := webappURL
+	if strings.Contains(dailyURL, "?") {
+		dailyURL += "&startapp=daily"
 	} else {
-		emptyMsgs := map[string]string{
-			"uz": fmt.Sprintf("📅 *Bugungi dars*\n\n"+
-				"Daraja: *%s*\n\n"+
-				"✅ Takrorlash uchun so'z yo'q. Yangi so'zlar qo'shing yoki AI bilan suhbatlashing.\n\n"+
-				"Mini App ni oching:", strings.ToUpper(user.Level)),
-			"ru": fmt.Sprintf("📅 *Урок дня*\n\n"+
-				"Уровень: *%s*\n\n"+
-				"✅ Нет слов для повторения. Добавьте новые слова или пообщайтесь с AI.\n\n"+
-				"Откройте Mini App:", strings.ToUpper(user.Level)),
-		}
-		msgText = emptyMsgs["uz"]
-		if m, ok := emptyMsgs[lang]; ok {
-			msgText = m
-		}
-
-		msg := tgbotapi.NewMessage(chatID, msgText)
-		msg.ParseMode = "Markdown"
-		msg.ReplyMarkup = launchKeyboard(chatID, lang)
-		if _, err := bot.Send(msg); err != nil {
-			sugar.Errorw("send daily message", "error", err)
-		}
+		dailyURL += "?startapp=daily"
 	}
+
+	btnLabel := map[string]string{"uz": "📖 Darsni boshlash", "ru": "📖 Начать урок"}
+	lbl := btnLabel["uz"]
+	if l, ok := btnLabel[lang]; ok {
+		lbl = l
+	}
+
+	sendWebAppMessage(chatID, msgText, lbl, dailyURL, sugar, "Markdown")
 }
 
 func formatStatsMessage(stats *models.UserStats, lang string, daysActive int) string {
@@ -251,30 +220,38 @@ func sendMessage(bot *tgbotapi.BotAPI, chatID int64, text string) {
 	}
 }
 
-func launchKeyboard(chatID int64, lang string) interface{} {
-	labels := map[string]string{
-		"uz": "🚀 Lingvo AI ни ишга тушириш",
-		"ru": "🚀 Запустить Lingvo AI",
-	}
-
-	label := labels["uz"]
-	if l, ok := labels[lang]; ok {
-		label = l
-	}
-
-	webAppURL := "https://t.me/lingvo_ai_bot/app"
-	webAppData := map[string]interface{}{
-		"text": label,
-		"web_app": map[string]string{
-			"url": webAppURL,
+func sendWebAppMessage(chatID int64, text, buttonLabel, webAppURL string, sugar *zap.SugaredLogger, parseMode string) {
+	body := map[string]interface{}{
+		"chat_id":    chatID,
+		"text":       text,
+		"parse_mode": parseMode,
+		"reply_markup": map[string]interface{}{
+			"inline_keyboard": [][]map[string]interface{}{
+				{{"text": buttonLabel, "web_app": map[string]string{"url": webAppURL}}},
+			},
 		},
 	}
 
-	data, _ := json.Marshal([]interface{}{[]interface{}{webAppData}})
+	payload, _ := json.Marshal(body)
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", botTokenGlobal)
 
-	replyMarkup := fmt.Sprintf(`{"inline_keyboard":%s}`, string(data))
+	resp, err := http.Post(url, "application/json", bytes.NewReader(payload))
+	if err != nil {
+		sugar.Errorw("send webapp message http", "error", err)
+		return
+	}
+	defer resp.Body.Close()
 
-	var markup tgbotapi.InlineKeyboardMarkup
-	_ = json.Unmarshal([]byte(replyMarkup), &markup)
-	return markup
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		sugar.Errorw("send webapp message failed", "status", resp.StatusCode, "body", string(raw))
+	}
+}
+
+func cleanJSON(raw string) string {
+	raw = strings.TrimSpace(raw)
+	raw = strings.TrimPrefix(raw, "```json")
+	raw = strings.TrimPrefix(raw, "```")
+	raw = strings.TrimSuffix(raw, "```")
+	return strings.TrimSpace(raw)
 }

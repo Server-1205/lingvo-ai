@@ -41,30 +41,30 @@ export function ProgressView({ onStartLevelTest }: ProgressViewProps) {
       )}
 
       {progress && (
-        <div className="card" style={{ display: 'flex', justifyContent: 'space-around', padding: 20 }}>
+        <div className="card" style={{ display: 'flex', justifyContent: 'space-around', padding: '24px 12px' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--tg-button)' }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--c-primary)' }}>
               {progress.level?.toUpperCase()}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--tg-hint)', marginTop: 4 }}>{t('progress.level')}</div>
+            <div style={{ fontSize: 13, color: 'var(--c-text-secondary)', marginTop: 4, fontWeight: 500 }}>{t('progress.level')}</div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--tg-button)' }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--c-primary)' }}>
               {progress.messages_sent}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--tg-hint)', marginTop: 4 }}>{t('progress.messages')}</div>
+            <div style={{ fontSize: 13, color: 'var(--c-text-secondary)', marginTop: 4, fontWeight: 500 }}>{t('progress.messages')}</div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--tg-button)' }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--c-primary)' }}>
               {progress.words_learned}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--tg-hint)', marginTop: 4 }}>{t('progress.words')}</div>
+            <div style={{ fontSize: 13, color: 'var(--c-text-secondary)', marginTop: 4, fontWeight: 500 }}>{t('progress.words')}</div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--tg-button)' }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--c-primary)' }}>
               {progress.streak_days}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--tg-hint)', marginTop: 4 }}>{t('progress.streak')}</div>
+            <div style={{ fontSize: 13, color: 'var(--c-text-secondary)', marginTop: 4, fontWeight: 500 }}>{t('progress.streak')}</div>
           </div>
         </div>
       )}
@@ -83,7 +83,7 @@ export function ProgressView({ onStartLevelTest }: ProgressViewProps) {
         <div style={{ padding: '16px' }}>
           <button
             className="btn btn-primary"
-            style={{ width: '100%', padding: 12 }}
+            style={{ width: '100%', padding: 14, fontSize: 16, fontWeight: 700 }}
             onClick={onStartLevelTest}
           >
             {t('level.take_test')}

@@ -28,17 +28,24 @@ func chatHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLogge
 
 		userID, _ := c.Get("user_id")
 		uid, _ := userID.(int)
-		lang, _ := c.Get("lang")
+		ctxLang, _ := c.Get("lang")
 		level, _ := c.Get("level")
 		isPremium, _ := c.Get("is_premium")
 		dailyUsed, _ := c.Get("daily_used")
 		dailyLimit, _ := c.Get("daily_limit")
 
 		lvl, _ := level.(string)
-		lng, _ := lang.(string)
+		lng := req.Lang
+		if lng == "" {
+			lng, _ = ctxLang.(string)
+		}
 		used, _ := dailyUsed.(int)
 		limit, _ := dailyLimit.(int)
 		premium, _ := isPremium.(bool)
+
+		if lng != "" && req.Lang != "" {
+			_ = db.UpdateUserLang(c.Request.Context(), database, uid, lng)
+		}
 
 		var prompt string
 		if premium {

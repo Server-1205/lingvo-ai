@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/url"
 	"sort"
 	"strings"
@@ -22,20 +23,42 @@ type telegramUser struct {
 	LanguageCode string `json:"language_code"`
 }
 
-func AuthMiddleware(botToken string, database *sqlx.DB) gin.HandlerFunc {
+func AuthMiddleware(botToken string, database *sqlx.DB, devMode bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if devMode {
+			log.Printf("[auth] DEV_MODE active, bypassing auth for %s", c.ClientIP())
+			mockTGID := int64(12345)
+			if err := db.UpsertUser(c.Request.Context(), database, mockTGID, "Dev", "uz"); err != nil {
+				c.AbortWithStatusJSON(500, gin.H{"error": "internal_error"})
+				return
+			}
+			user, err := db.GetUserByTelegramID(c.Request.Context(), database, mockTGID)
+			if err != nil {
+				c.AbortWithStatusJSON(500, gin.H{"error": "internal_error"})
+				return
+			}
+			c.Set("telegram_id", mockTGID)
+			c.Set("user_id", user.ID)
+			c.Set("lang", "uz")
+			c.Set("level", user.Level)
+			c.Next()
+			return
+		}
+
 		initData := c.GetHeader("X-Telegram-Init-Data")
 
 		var tgUser *telegramUser
 		var err error
 
 		if initData == "" {
+			log.Printf("[auth] missing init data header from %s", c.ClientIP())
 			c.AbortWithStatusJSON(401, gin.H{"error": "unauthorized", "message": "Missing init data"})
 			return
 		}
 
 		tgUser, err = verifyInitData(initData, botToken)
 		if err != nil {
+			log.Printf("[auth] verifyInitData failed: %v (initData length=%d, ip=%s)", err, len(initData), c.ClientIP())
 			c.AbortWithStatusJSON(401, gin.H{"error": "unauthorized", "message": "Invalid init data"})
 			return
 		}
@@ -99,7 +122,7 @@ func verifyInitData(initData, botToken string) (*telegramUser, error) {
 	expectedHash := hex.EncodeToString(mac.Sum(nil))
 
 	if !hmac.Equal([]byte(hash), []byte(expectedHash)) {
-		return nil, fmt.Errorf("invalid hash")
+		return nil, fmt.Errorf("invalid hash: expected=%s got=%s keys=%v initData=%q", expectedHash, hash, keys, initData)
 	}
 
 	userStr := values.Get("user")

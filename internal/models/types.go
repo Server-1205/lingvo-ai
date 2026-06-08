@@ -46,6 +46,7 @@ type Usage struct {
 
 type ChatRequest struct {
 	Text string `json:"text" binding:"required"`
+	Lang string `json:"lang"`
 }
 
 type Subscription struct {
@@ -94,13 +95,17 @@ type GrammarResponse struct {
 
 type VocabLookupRequest struct {
 	Word string `json:"word" binding:"required"`
+	Lang string `json:"lang"`
 }
 
 type VocabLookupResponse struct {
+	WordEn        string   `json:"word_en"`
 	TranslationUz string   `json:"translation_uz"`
 	TranslationRu string   `json:"translation_ru"`
-	Examples      []string `json:"examples"`
+	ExamplesUz    []string `json:"examples_uz"`
+	ExamplesRu    []string `json:"examples_ru"`
 	Level         string   `json:"level"`
+	Error         string   `json:"error,omitempty"`
 }
 
 type VocabWord struct {
@@ -108,7 +113,9 @@ type VocabWord struct {
 	UserID        int        `db:"user_id" json:"user_id"`
 	Word          string     `db:"word" json:"word"`
 	Translation   string     `db:"translation" json:"translation"`
+	TranslationRu string     `db:"translation_ru" json:"translation_ru"`
 	Example       string     `db:"example" json:"example"`
+	ExampleRu     string     `db:"example_ru" json:"example_ru"`
 	Level         string     `db:"level" json:"level"`
 	ReviewCount   int        `db:"review_count" json:"review_count"`
 	EaseFactor    float64    `db:"ease_factor" json:"ease_factor"`

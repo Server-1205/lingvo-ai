@@ -30,26 +30,6 @@ func TestReminderText(t *testing.T) {
 	}
 }
 
-func TestReviewButton(t *testing.T) {
-	uzKeyboard := reviewButton("uz")
-	if len(uzKeyboard.InlineKeyboard) == 0 || len(uzKeyboard.InlineKeyboard[0]) == 0 {
-		t.Fatal("reviewButton should return a keyboard with at least one button")
-	}
-	btn := uzKeyboard.InlineKeyboard[0][0]
-	if !strings.Contains(btn.Text, "Hozir") {
-		t.Errorf("uz button should contain 'Hozir', got: %s", btn.Text)
-	}
-	if btn.URL == nil || !strings.Contains(*btn.URL, "startapp=review") {
-		t.Errorf("button URL should contain startapp=review, got: %v", btn.URL)
-	}
-
-	ruKeyboard := reviewButton("ru")
-	ruBtn := ruKeyboard.InlineKeyboard[0][0]
-	if !strings.Contains(ruBtn.Text, "Повторить") {
-		t.Errorf("ru button should contain 'Повторить', got: %s", ruBtn.Text)
-	}
-}
-
 func TestRemindedTodayDedup(t *testing.T) {
 	remindedMu = sync.Mutex{}
 	remindedToday = map[int64]time.Time{}
@@ -80,12 +60,4 @@ func TestRemindedTodayDedup(t *testing.T) {
 	}
 }
 
-func TestReviewButtonDeepLink(t *testing.T) {
-	kbd := reviewButton("uz")
-	btn := kbd.InlineKeyboard[0][0]
 
-	expectedPrefix := "https://t.me/lingvo_ai_bot/app"
-	if btn.URL == nil || !strings.HasPrefix(*btn.URL, expectedPrefix) {
-		t.Errorf("button URL should start with %s, got: %v", expectedPrefix, btn.URL)
-	}
-}

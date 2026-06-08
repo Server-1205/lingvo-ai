@@ -11,6 +11,7 @@ import (
 
 	"github.com/lingvo-ai/lingvo/internal/ai"
 	"github.com/lingvo-ai/lingvo/internal/middleware"
+	"github.com/lingvo-ai/lingvo/internal/tts"
 )
 
 func parseAdminIDs(raw string) []int64 {
@@ -32,31 +33,21 @@ func parseAdminIDs(raw string) []int64 {
 	return ids
 }
 
-func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, openAIKey, openAIBaseURL, openAIModel, botToken string, sugar *zap.SugaredLogger, aiQueueEnabled bool, adminIDList string, devMode bool) {
+func RegisterRoutes(r *gin.Engine, db *sqlx.DB, botToken string, sugar *zap.SugaredLogger, adminIDList string, devMode bool, aiClient *ai.Client, ttsClient tts.Synthesizer) {
 	api := r.Group("/api")
 	api.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	authMw := middleware.AuthMiddleware(botToken, db)
+	authMw := middleware.AuthMiddleware(botToken, db, devMode)
 	adminIDs := parseAdminIDs(adminIDList)
 	rateMw := middleware.RateLimitMiddleware(db, adminIDs, devMode)
 
-	var aiClient *ai.Client
-	if geminiKey != "" {
-		var err error
-		aiClient, err = ai.NewClient(context.Background(), geminiKey, openAIKey, openAIBaseURL, openAIModel, sugar)
-		if err != nil {
-			sugar.Warnw("failed to init AI client, AI features disabled", "error", err)
-		} else {
-			sugar.Info("AI client initialized")
-			if aiQueueEnabled {
-				aiClient.EnableQueue(context.Background(), sugar)
-				sugar.Info("AI priority queue enabled")
-			}
-		}
-	} else {
-		sugar.Warn("GEMINI_API_KEY not set, AI features disabled")
+	if aiClient != nil {
+		go func() {
+			normalizeVocabCase(context.Background(), db, sugar)
+			translateMissingVocab(context.Background(), db, aiClient, sugar)
+		}()
 	}
 
 	protected := api.Group("")
@@ -75,9 +66,11 @@ func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, openAIKey, openAIBase
 		protected.POST("/quiz", rateMw, quizHandler(db, aiClient, sugar))
 		protected.POST("/level", levelTestHandler(db, aiClient, sugar))
 		protected.POST("/level/save", levelSaveHandler(db))
+		protected.POST("/daily", rateMw, dailyHandler(db, aiClient, sugar))
 		protected.GET("/progress", progressHandler(db))
 		protected.GET("/progress/history", progressHistoryHandler(db, sugar))
 		protected.GET("/subscription", subscriptionHandler(db))
 		protected.POST("/create-invoice", invoiceHandler(botToken, sugar))
+		protected.GET("/tts", ttsHandler(ttsClient, sugar))
 	}
 }

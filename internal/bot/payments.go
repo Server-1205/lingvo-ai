@@ -19,7 +19,7 @@ var durationMap = map[string]string{
 	"monthly": "+30 days",
 }
 
-func handlePayment(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger, update tgbotapi.Update) {
+func handlePayment(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger, update tgbotapi.Update, adminIDs []int64) {
 	if update.Message == nil || update.Message.SuccessfulPayment == nil {
 		return
 	}
@@ -68,6 +68,19 @@ func handlePayment(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLo
 	msg := buildSubscriptionConfirmation(chatID, update.Message.From.LanguageCode, plan, expiresAt)
 	if _, err := bot.Send(msg); err != nil {
 		sugar.Errorw("send payment confirmation", "error", err)
+	}
+
+	adminMsg := fmt.Sprintf("💰 *Новый платёж!*\n\nПользователь: `%d`\nПлан: *%s*\nStars: *%d*\nДействует до: `%s`",
+		telegramID, plan, starsAmount, expiresAt.Format("2006-01-02"))
+
+	for _, adminID := range adminIDs {
+		admMsg := tgbotapi.NewMessage(adminID, adminMsg)
+		admMsg.ParseMode = "Markdown"
+		if _, err := bot.Send(admMsg); err != nil {
+			sugar.Errorw("send admin notification", "error", err, "admin_id", adminID)
+		} else {
+			sugar.Infow("admin notification sent", "admin_id", adminID, "telegram_id", telegramID)
+		}
 	}
 }
 

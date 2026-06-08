@@ -31,7 +31,16 @@ func reminderText(lang string, count int) string {
 	return msgs["uz"]
 }
 
-func reviewButton(lang string) tgbotapi.InlineKeyboardMarkup {
+func sendReviewWebApp(bot *tgbotapi.BotAPI, chatID int64, lang string, sugar *zap.SugaredLogger) {
+	texts := map[string]string{
+		"uz": "📚 Eslatma! So'zlaringizni takrorlash vaqti keldi.",
+		"ru": "📚 Напоминание! Пора повторить слова.",
+	}
+	text := texts["uz"]
+	if t, ok := texts[lang]; ok {
+		text = t
+	}
+
 	labels := map[string]string{
 		"uz": "📖 Hozir takrorlash",
 		"ru": "📖 Повторить сейчас",
@@ -41,11 +50,7 @@ func reviewButton(lang string) tgbotapi.InlineKeyboardMarkup {
 		label = l
 	}
 
-	deepLink := "https://t.me/lingvo_ai_bot/app?startapp=review"
-
-	btn := tgbotapi.NewInlineKeyboardButtonURL(label, deepLink)
-	row := tgbotapi.NewInlineKeyboardRow(btn)
-	return tgbotapi.NewInlineKeyboardMarkup(row)
+	sendWebAppMessage(chatID, text, label, "https://t.me/lingvo_ai_bot/app?startapp=review", sugar, "")
 }
 
 func StartReminderScheduler(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger) {
@@ -83,14 +88,13 @@ func StartReminderScheduler(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.
 			}
 
 			lang := user.Lang
-			msg := tgbotapi.NewMessage(user.TelegramID, reminderText(lang, dueCount))
-			msg.ParseMode = "Markdown"
-			msg.ReplyMarkup = reviewButton(lang)
-
-			if _, err := bot.Send(msg); err != nil {
-				sugar.Errorw("reminder: send", "error", err, "user_id", user.ID, "telegram_id", user.TelegramID)
-				continue
-			}
+			sendWebAppMessage(
+				user.TelegramID,
+				reminderText(lang, dueCount),
+				map[string]string{"uz": "📖 Hozir takrorlash", "ru": "📖 Повторить сейчас"}[lang],
+				"https://t.me/lingvo_ai_bot/app?startapp=review",
+				sugar, "Markdown",
+			)
 
 			remindedMu.Lock()
 			remindedToday[user.TelegramID] = time.Now()

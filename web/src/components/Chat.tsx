@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { chatStream } from '../api/client';
+import { chatStream, ApiError } from '../api/client';
 import type { Correction, PremiumAnalysis, Usage } from '../api/client';
 import { GrammarBlock } from './GrammarBlock';
 import { PremiumCorrectionBlock } from './PremiumCorrectionBlock';
@@ -20,12 +20,52 @@ interface ChatProps {
 }
 
 export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [usage, setUsage] = useState<Usage>({ daily_used: 0, daily_limit: 10, is_premium: false });
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const hasSpeechSupport = !!SpeechRecognitionAPI;
+
+  const handleVoice = useCallback(() => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    if (!SpeechRecognitionAPI) return;
+
+    const recognition = new SpeechRecognitionAPI();
+    recognition.lang = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event: any) => {
+      const result = event.results[event.results.length - 1];
+      if (result.isFinal) {
+        setInput(result[0].transcript);
+      }
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+    setInput('');
+    recognition.start();
+    setIsListening(true);
+  }, [isListening, i18n.language, SpeechRecognitionAPI]);
 
   useEffect(() => {
     if (listRef.current) {
@@ -48,7 +88,7 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
 
     try {
       await chatStream(
-        { text },
+        { text, lang: i18n.language },
         (token) => {
           setMessages(prev => {
             const next = [...prev];
@@ -86,13 +126,23 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
         },
       );
     } catch (err) {
-      console.debug('[chat] error', (err as Error).message);
+      console.debug('[FIX] chat error', (err as Error).message);
+      if (err instanceof ApiError && err.status === 429) {
+        const errData = err.data as Record<string, unknown>;
+        if (errData.daily_used !== undefined && errData.daily_limit !== undefined) {
+          setUsage({
+            daily_used: errData.daily_used as number,
+            daily_limit: errData.daily_limit as number,
+            is_premium: errData.is_premium as boolean || false,
+          });
+        }
+      }
       setIsStreaming(false);
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', flex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', flex: 1, paddingBottom: 'calc(var(--nav-height) + var(--safe-bottom))' }}>
       <div
         ref={listRef}
         className="scroll-area"
@@ -105,20 +155,21 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
           </div>
         )}
         {messages.map((msg, i) => (
-          <div key={i} style={{ margin: '8px 16px' }}>
+          <div key={i} style={{ margin: '10px 16px' }}>
             <div style={{
               display: 'flex',
               justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
             }}>
               <div style={{
                 maxWidth: '80%',
-                padding: '10px 14px',
-                borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                padding: '12px 18px',
+                borderRadius: msg.role === 'user' ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
                 background: msg.role === 'user' ? 'var(--tg-button)' : 'var(--tg-secondary-bg)',
                 color: msg.role === 'user' ? 'var(--tg-button-text)' : 'var(--tg-text)',
-                fontSize: 15,
-                lineHeight: 1.4,
+                fontSize: 17,
+                lineHeight: 1.5,
                 whiteSpace: 'pre-wrap',
+                boxShadow: msg.role === 'ai' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
               }}>
                 {msg.text}
               </div>
@@ -182,8 +233,9 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
           onSubmit={handleSubmit}
           style={{
             display: 'flex',
-            gap: 8,
-            padding: '8px 16px',
+            gap: 10,
+            padding: '10px 16px',
+            paddingBottom: 'calc(10px + var(--safe-bottom))',
             borderTop: '1px solid var(--tg-border)',
             background: 'var(--tg-bg)',
           }}
@@ -194,22 +246,50 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
             placeholder={t('chat.input_placeholder')}
             style={{
               flex: 1,
-              padding: '10px 14px',
-              border: '1px solid var(--tg-border)',
-              borderRadius: 10,
+              padding: '12px 16px',
+              border: '2px solid var(--tg-border)',
+              borderRadius: 14,
               background: 'var(--tg-secondary-bg)',
               color: 'var(--tg-text)',
-              fontSize: 15,
+              fontSize: 16,
               outline: 'none',
             }}
           />
+          {hasSpeechSupport && (
+            <button
+              type="button"
+              onClick={handleVoice}
+              style={{
+                padding: '8px 10px',
+                fontSize: 18,
+                lineHeight: 1,
+                border: 'none',
+                borderRadius: 12,
+                background: isListening ? 'var(--c-error)' : 'var(--tg-secondary-bg)',
+                cursor: 'pointer',
+                minWidth: 40,
+              }}
+              title={t('chat.voice_input')}
+            >
+              {isListening ? '🔴' : '🎤'}
+            </button>
+          )}
           <button
             type="submit"
             disabled={!input.trim() || isStreaming}
-            className="btn btn-primary"
-            style={{ padding: '10px 16px' }}
+            style={{
+              padding: '8px 12px',
+              fontSize: 20,
+              lineHeight: 1,
+              border: 'none',
+              borderRadius: 12,
+              background: input.trim() && !isStreaming ? 'var(--c-primary)' : 'var(--tg-secondary-bg)',
+              color: input.trim() && !isStreaming ? '#fff' : 'var(--tg-hint)',
+              cursor: 'pointer',
+              minWidth: 40,
+            }}
           >
-            {t('chat.send')}
+            ➡️
           </button>
         </form>
       )}

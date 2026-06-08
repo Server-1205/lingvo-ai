@@ -29,10 +29,10 @@ func NewClient(ctx context.Context, apiKey string, openAIKey, openAIBaseURL, ope
 	}
 
 	model := genClient.GenerativeModel("gemini-2.0-flash")
-	model.SetTemperature(0.4)
+	model.SetTemperature(0.3)
 
 	liteModel := genClient.GenerativeModel("gemini-2.0-flash-lite")
-	liteModel.SetTemperature(0.4)
+	liteModel.SetTemperature(0.2)
 
 	var fb *openAIClient
 	if openAIKey != "" {
@@ -204,6 +204,7 @@ func (c *Client) ChatStream(ctx context.Context, prompt string) <-chan StreamEve
 		iter := c.model.GenerateContentStream(ctx, genai.Text(prompt))
 
 		var fullText strings.Builder
+		geminiFailed := false
 
 		for {
 			chunk, err := iter.Next()
@@ -211,9 +212,9 @@ func (c *Client) ChatStream(ctx context.Context, prompt string) <-chan StreamEve
 				break
 			}
 			if err != nil {
-				errData, _ := json.Marshal(err.Error())
-				ch <- StreamEvent{Type: EventToken, Data: errData}
-				return
+				c.sugar.Warnw("gemini stream failed, trying fallback", "error", err)
+				geminiFailed = true
+				break
 			}
 
 			if len(chunk.Candidates) == 0 || len(chunk.Candidates[0].Content.Parts) == 0 {
@@ -230,7 +231,27 @@ func (c *Client) ChatStream(ctx context.Context, prompt string) <-chan StreamEve
 			}
 		}
 
-		if fullText.Len() == 0 {
+		if geminiFailed && c.fallback != nil && c.fallback.IsConfigured() {
+			c.sugar.Warn("fallback AI used for stream")
+			fallbackText, fbErr := c.fallback.Generate(ctx, prompt)
+			if fbErr == nil && fallbackText != "" {
+				var parsedResp models.AIResponse
+				displayText := fallbackText
+				if err := json.Unmarshal([]byte(fallbackText), &parsedResp); err == nil && parsedResp.Reply != "" {
+					displayText = parsedResp.Reply
+				}
+				data, _ := json.Marshal(displayText)
+				ch <- StreamEvent{Type: EventToken, Data: data}
+				fullText.WriteString(fallbackText)
+			} else {
+				c.sugar.Errorw("fallback also failed for stream", "error", fbErr)
+				errData, _ := json.Marshal("ai_service_unavailable")
+				ch <- StreamEvent{Type: EventToken, Data: errData}
+				return
+			}
+		}
+
+		if !geminiFailed && fullText.Len() == 0 {
 			return
 		}
 

@@ -28,6 +28,7 @@ export function NavBar({ active, onTabChange }: NavBarProps) {
       borderTop: '1px solid var(--tg-border)',
       paddingBottom: 'var(--safe-bottom)',
       zIndex: 100,
+      boxShadow: '0 -2px 8px rgba(0,0,0,0.06)',
     }}>
       {tabs.map(tab => (
         <button
@@ -38,17 +39,18 @@ export function NavBar({ active, onTabChange }: NavBarProps) {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 2,
-            padding: '8px 4px',
+            gap: 3,
+            padding: '10px 4px',
             border: 'none',
             background: 'transparent',
-            color: active === tab.key ? 'var(--tg-button)' : 'var(--tg-hint)',
-            fontSize: 10,
+            color: active === tab.key ? 'var(--c-primary)' : '#9E9E9E',
+            fontSize: 12,
+            fontWeight: active === tab.key ? 700 : 500,
             cursor: 'pointer',
             transition: 'color 0.2s',
           }}
         >
-          <span style={{ fontSize: 22 }}>{tab.icon}</span>
+          <span style={{ fontSize: 24 }}>{tab.icon}</span>
           <span>{t(tab.labelKey)}</span>
         </button>
       ))}

@@ -71,8 +71,18 @@ func vocabLookupHandler(aiClient *ai.Client, sugar *zap.SugaredLogger) gin.Handl
 			return
 		}
 
-		lang, _ := c.Get("lang")
-		lng, _ := lang.(string)
+		lng := req.Lang
+		if lng == "" {
+			if ctxLang, ok := c.Get("lang"); ok {
+				lng, _ = ctxLang.(string)
+			}
+		}
+
+		if lng == "uz" && hasCyrillic(req.Word) {
+			sugar.Warnw("[vocab] cyrillic word rejected in uz mode", "word", req.Word)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_language"})
+			return
+		}
 
 		prompt := ai.BuildVocabPrompt(lng, req.Word)
 
@@ -89,6 +99,12 @@ func vocabLookupHandler(aiClient *ai.Client, sugar *zap.SugaredLogger) gin.Handl
 		if err := json.Unmarshal([]byte(raw), &resp); err != nil {
 			sugar.Errorw("parse vocab response", "error", err, "raw", raw)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "parse_error"})
+			return
+		}
+
+		if resp.Error != "" {
+			sugar.Warnw("[vocab] AI rejected word", "word", req.Word, "reason", resp.Error)
+			c.JSON(http.StatusBadRequest, gin.H{"error": resp.Error})
 			return
 		}
 

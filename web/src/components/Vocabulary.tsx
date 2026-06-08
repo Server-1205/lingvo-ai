@@ -1,21 +1,25 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { initData } from '@telegram-apps/sdk';
 import { getVocab, addVocab, deleteVocab, getDueWords, submitReview, getSubscription } from '../api/client';
 import type { VocabWord } from '../api/client';
 import { ReviewCard } from './ReviewCard';
+import { useTTS } from '../hooks/useTTS';
+import { ApiError } from '../api/client';
 
 interface VocabularyProps {
   initialTab?: 'my' | 'lookup' | 'review';
 }
 
 export function Vocabulary({ initialTab }: VocabularyProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<'my' | 'lookup' | 'review'>(initialTab || 'my');
   const [reviewIndex, setReviewIndex] = useState(0);
   const [lookupWord, setLookupWord] = useState('');
   const [addedWord, setAddedWord] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
 
   const { data: sub } = useQuery({
     queryKey: ['subscription'],
@@ -36,11 +40,27 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
   });
 
   const addMutation = useMutation({
-    mutationFn: () => addVocab({ word: lookupWord }),
+    mutationFn: () => addVocab({ word: lookupWord, lang: i18n.language }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['vocab'] });
-      setAddedWord(`${lookupWord} — ${data.translation_uz}`);
+      const showTranslation = lang === 'ru' && data.translation_ru ? data.translation_ru : data.translation_uz;
+      setAddedWord(`${data.word_en || lookupWord} — ${showTranslation}`);
       setLookupWord('');
+      setAddError(null);
+    },
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 400) {
+        const data = err.data as Record<string, string>;
+        if (data.error === 'inappropriate_word') {
+          setAddError('vocab.inappropriate');
+        } else if (data.error === 'invalid_language') {
+          setAddError('vocab.invalid_language');
+        } else {
+          setAddError('vocab.add_error');
+        }
+      } else {
+        setAddError('vocab.add_error');
+      }
     },
   });
 
@@ -57,7 +77,12 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
     },
   });
 
+  const { play: playTTS, isPlaying: ttsPlaying } = useTTS();
   const dueList = dueWords ?? [];
+
+  const lang = i18n.language === 'ru' ? 'ru' : 'uz';
+  const tr = (w: VocabWord) => lang === 'ru' && w.translation_ru ? w.translation_ru : w.translation;
+  const ex = (w: VocabWord) => lang === 'ru' && w.example_ru ? w.example_ru : w.example;
 
   return (
     <div className="scroll-area">
@@ -75,10 +100,10 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
             onClick={() => {
               console.debug('[vocab] export clicked');
               const a = document.createElement('a');
-              const initDataRaw = (window as any).Telegram?.WebApp?.initData;
-              fetch('/api/vocab/export', {
-                headers: initDataRaw ? { 'X-Telegram-Init-Data': initDataRaw } : {},
-              })
+              const headers: Record<string, string> = {};
+              const raw = initData.raw();
+              if (raw) headers['X-Telegram-Init-Data'] = raw;
+              fetch('/api/vocab/export', { headers })
                 .then(res => {
                   if (!res.ok) throw new Error('export failed');
                   return res.blob();
@@ -97,24 +122,24 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
         )}
       </div>
 
-      <div style={{ display: 'flex', margin: '0 16px 12px', gap: 8 }}>
+      <div style={{ display: 'flex', margin: '0 16px 16px', gap: 8 }}>
         <button
-          className={`btn ${tab === 'my' ? 'btn-primary' : ''}`}
-          style={{ flex: 1, padding: '8px 0', fontSize: 13 }}
+          className={`btn ${tab === 'my' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 600 }}
           onClick={() => setTab('my')}
         >
           {t('vocab.my_words')}
         </button>
         <button
-          className={`btn ${tab === 'lookup' ? 'btn-primary' : ''}`}
-          style={{ flex: 1, padding: '8px 0', fontSize: 13 }}
+          className={`btn ${tab === 'lookup' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 600 }}
           onClick={() => setTab('lookup')}
         >
           {t('vocab.lookup_tab')}
         </button>
         <button
-          className={`btn ${tab === 'review' ? 'btn-primary' : ''}`}
-          style={{ flex: 1, padding: '8px 0', fontSize: 13, position: 'relative' }}
+          className={`btn ${tab === 'review' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 600, position: 'relative' }}
           onClick={() => { setTab('review'); setReviewIndex(0); }}
         >
           {t('vocab.review')}
@@ -147,27 +172,48 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
           )}
 
           {words.map((w: VocabWord) => (
-            <div key={w.id} className="card" style={{ margin: '8px 16px', padding: 12 }}>
+            <div key={w.id} className="card" style={{ margin: '10px 16px', padding: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 600 }}>{w.word}</div>
-                  <div style={{ fontSize: 14, color: 'var(--tg-hint)', marginTop: 2 }}>{w.translation}</div>
-                  <div style={{ fontSize: 13, color: 'var(--tg-hint)', marginTop: 4, fontStyle: 'italic' }}>
-                    {w.example}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--tg-text)' }}>{w.word}</div>
+                  <div style={{ fontSize: 16, color: 'var(--c-text-secondary)', marginTop: 4 }}>{tr(w)}</div>
+                  <div style={{ fontSize: 15, color: 'var(--c-text-hint)', marginTop: 6, fontStyle: 'italic' }}>
+                    {ex(w)}
                   </div>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                    <span style={{ fontSize: 11, background: 'var(--tg-secondary-bg)', padding: '2px 6px', borderRadius: 4 }}>
-                      {w.level?.toUpperCase()}
-                    </span>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                    {w.level && (
+                      <span style={{
+                        fontSize: 12,
+                        background: 'var(--c-primary-light)',
+                        color: 'var(--c-primary-dark)',
+                        padding: '2px 8px',
+                        borderRadius: 6,
+                        fontWeight: 600,
+                      }}>
+                        {w.level.toUpperCase()}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <button
-                  className="btn"
-                  style={{ fontSize: 12, padding: '4px 8px', color: 'var(--tg-destructive)' }}
-                  onClick={() => deleteMutation.mutate(w.id)}
-                >
-                  {t('vocab.delete')}
-                </button>
+                <div style={{ display: 'flex', gap: 6, marginLeft: 12 }}>
+                  {!isLoading && (
+                    <button
+                      className="btn"
+                      style={{ fontSize: 16, padding: '6px 10px', lineHeight: 1, borderRadius: 10 }}
+                      onClick={() => playTTS(w.word)}
+                      disabled={ttsPlaying}
+                    >
+                      🔊
+                    </button>
+                  )}
+                  <button
+                    className="btn"
+                    style={{ fontSize: 12, padding: '6px 10px', color: 'var(--tg-destructive)', borderRadius: 10 }}
+                    onClick={() => deleteMutation.mutate(w.id)}
+                  >
+                    {t('vocab.delete')}
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -222,7 +268,7 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <input
               value={lookupWord}
-              onChange={e => { setLookupWord(e.target.value); setAddedWord(null); }}
+              onChange={e => { setLookupWord(e.target.value); setAddedWord(null); setAddError(null); }}
               placeholder={t('vocab.lookup_placeholder')}
               style={{
                 flex: 1,
@@ -249,6 +295,15 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
             <div className="placeholder">
               <div className="placeholder-icon">⏳</div>
               <div>{t('common.loading')}</div>
+            </div>
+          )}
+
+          {addError && !addMutation.isPending && (
+            <div className="card" style={{ padding: 16, textAlign: 'center' }}>
+              <div style={{ fontSize: 24, marginBottom: 8 }}>🚫</div>
+              <div style={{ fontSize: 14, color: '#e53935', fontWeight: 600 }}>
+                {t(addError)}
+              </div>
             </div>
           )}
 

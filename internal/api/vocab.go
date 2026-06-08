@@ -1,10 +1,12 @@
 package api
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +17,15 @@ import (
 	"github.com/lingvo-ai/lingvo/internal/db"
 	"github.com/lingvo-ai/lingvo/internal/models"
 )
+
+func hasCyrillic(s string) bool {
+	for _, r := range s {
+		if r >= '\u0400' && r <= '\u04FF' {
+			return true
+		}
+	}
+	return false
+}
 
 type reviewRequest struct {
 	WordID  int `json:"word_id" binding:"required"`
@@ -90,6 +101,7 @@ func vocabAddHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredL
 
 		var req struct {
 			Word string `json:"word" binding:"required"`
+			Lang string `json:"lang"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
@@ -98,8 +110,18 @@ func vocabAddHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredL
 
 		userID, _ := c.Get("user_id")
 		uid, _ := userID.(int)
-		lang, _ := c.Get("lang")
-		lng, _ := lang.(string)
+		lng := req.Lang
+		if lng == "" {
+			if ctxLang, ok := c.Get("lang"); ok {
+				lng, _ = ctxLang.(string)
+			}
+		}
+
+		if lng == "uz" && hasCyrillic(req.Word) {
+			sugar.Warnw("[vocab] cyrillic word rejected in uz mode", "word", req.Word)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_language"})
+			return
+		}
 
 		prompt := ai.BuildVocabPrompt(lng, req.Word)
 		raw, err := aiClient.Generate(c.Request.Context(), prompt)
@@ -117,17 +139,34 @@ func vocabAddHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredL
 			return
 		}
 
-		example := ""
-		if len(lookupResp.Examples) > 0 {
-			example = lookupResp.Examples[0]
+		if lookupResp.Error != "" {
+			sugar.Warnw("[vocab] AI rejected word", "word", req.Word, "reason", lookupResp.Error)
+			c.JSON(http.StatusBadRequest, gin.H{"error": lookupResp.Error})
+			return
 		}
-		if err := db.AddVocabulary(c.Request.Context(), database, uid, req.Word, lookupResp.TranslationUz, example, lookupResp.Level); err != nil {
+
+		example := ""
+		exampleRu := ""
+		if len(lookupResp.ExamplesUz) > 0 {
+			example = lookupResp.ExamplesUz[0]
+		}
+		if len(lookupResp.ExamplesRu) > 0 {
+			exampleRu = lookupResp.ExamplesRu[0]
+		}
+		if exampleRu == "" {
+			exampleRu = example
+		}
+		enWord := strings.ToLower(lookupResp.WordEn)
+		if enWord == "" {
+			enWord = strings.ToLower(req.Word)
+		}
+		if err := db.AddVocabulary(c.Request.Context(), database, uid, enWord, lookupResp.TranslationUz, example, lookupResp.Level, lookupResp.TranslationRu, exampleRu); err != nil {
 			sugar.Errorw("add vocab", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal_error"})
 			return
 		}
 
-		sugar.Infow("vocab added via ai", "word", req.Word, "user_id", uid)
+		sugar.Infow("vocab added via ai", "word", enWord, "user_id", uid)
 
 		c.JSON(http.StatusCreated, lookupResp)
 	}
@@ -272,4 +311,53 @@ func vocabReviewSubmitHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.H
 
 		c.JSON(http.StatusOK, reviewResponse{NextReview: nextReview})
 	}
+}
+
+func normalizeVocabCase(ctx context.Context, database *sqlx.DB, sugar *zap.SugaredLogger) {
+	_, _ = database.ExecContext(ctx, "DELETE FROM vocabulary WHERE id NOT IN (SELECT MIN(id) FROM vocabulary GROUP BY user_id, LOWER(word))")
+	_, _ = database.ExecContext(ctx, "UPDATE vocabulary SET word = LOWER(word)")
+	sugar.Info("[vocab] case normalization complete")
+}
+
+func translateMissingVocab(ctx context.Context, database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLogger) {
+	words, err := db.GetWordsMissingRu(ctx, database)
+	if err != nil {
+		sugar.Warnw("[vocab] failed to fetch words missing ru translation", "error", err)
+		return
+	}
+	if len(words) == 0 {
+		sugar.Info("[vocab] all words have ru translations")
+		return
+	}
+
+	sugar.Infow("[vocab] translating old words", "count", len(words))
+	for _, w := range words {
+		prompt := ai.BuildVocabPrompt("ru", w.Word)
+		raw, err := aiClient.Generate(ctx, prompt)
+		if err != nil {
+			sugar.Warnw("[vocab] translate failed", "word", w.Word, "error", err)
+			continue
+		}
+		raw = cleanJSON(raw)
+		var resp models.VocabLookupResponse
+		if err := json.Unmarshal([]byte(raw), &resp); err != nil {
+			sugar.Warnw("[vocab] parse failed", "word", w.Word, "error", err)
+			continue
+		}
+		if resp.Error != "" || (resp.TranslationRu == "" && resp.TranslationUz == "") {
+			sugar.Warnw("[vocab] deleting untranslatable word", "word", w.Word, "reason", resp.Error)
+			_ = db.DeleteVocabulary(ctx, database, w.UserID, w.ID)
+			continue
+		}
+		exampleRu := ""
+		if len(resp.ExamplesRu) > 0 {
+			exampleRu = resp.ExamplesRu[0]
+		}
+		if err := db.UpdateWordRuTranslation(ctx, database, w.ID, resp.TranslationRu, exampleRu); err != nil {
+			sugar.Warnw("[vocab] update failed", "word", w.Word, "error", err)
+			continue
+		}
+		sugar.Infow("[vocab] translated", "word", w.Word, "ru", resp.TranslationRu)
+	}
+	sugar.Infow("[vocab] translation migration complete", "processed", len(words))
 }

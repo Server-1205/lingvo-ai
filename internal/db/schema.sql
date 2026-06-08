@@ -62,3 +62,5 @@ CREATE INDEX IF NOT EXISTS idx_progress_user_date ON daily_progress(user_id, dat
 ALTER TABLE vocabulary ADD COLUMN ease_factor REAL DEFAULT 2.5;
 ALTER TABLE vocabulary ADD COLUMN interval INTEGER DEFAULT 0;
 ALTER TABLE vocabulary ADD COLUMN last_reviewed_at DATETIME;
+ALTER TABLE vocabulary ADD COLUMN translation_ru TEXT DEFAULT '';
+ALTER TABLE vocabulary ADD COLUMN example_ru TEXT DEFAULT '';

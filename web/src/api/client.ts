@@ -4,6 +4,7 @@ const BASE = import.meta.env.VITE_API_URL || '';
 
 export interface ChatRequest {
   text: string;
+  lang?: string;
 }
 
 export interface Correction {
@@ -57,7 +58,9 @@ export interface VocabWord {
   id: number;
   word: string;
   translation: string;
+  translation_ru: string;
   example: string;
+  example_ru: string;
   level: string;
   review_count: number;
   ease_factor: number;
@@ -69,17 +72,21 @@ export interface VocabWord {
 
 export interface VocabLookupRequest {
   word: string;
+  lang?: string;
 }
 
 export interface VocabLookupResponse {
+  word_en: string;
   translation_uz: string;
   translation_ru: string;
-  examples: string[];
+  examples_uz: string[];
+  examples_ru: string[];
   level: string;
 }
 
 export interface AddVocabRequest {
   word: string;
+  lang?: string;
 }
 
 export interface GrammarRequest {

@@ -169,3 +169,4 @@ sinking/
 - Все API-запросы через shared `request()` из `api/client.ts`, никогда через `fetch()`
 - Новые API эндпоинты: добавляйте `Cache-Control: no-store` через `c.Header()`
 - Ссылки: `docs/streaming.md` — AI Streaming, SPEC.md — полная спецификация
+- Session Memory MCP настроен (`@modelcontextprotocol/server-memory`) — используй `create_entities`, `add_observations`, `search_nodes` для сохранения/извлечения контекста между сессиями. Memory file: `.opencode/memory/memory.jsonl`

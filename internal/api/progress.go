@@ -34,6 +34,9 @@ func progressHistoryHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.Han
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal_error"})
 			return
 		}
+		if entries == nil {
+			entries = []models.DailyProgressEntry{}
+		}
 
 		sugar.Debugw("progress history response", "user_id", uid, "entries", len(entries))
 		c.JSON(http.StatusOK, models.ProgressHistoryResponse{Entries: entries})

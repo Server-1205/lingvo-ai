@@ -9,9 +9,14 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
+
+	"github.com/lingvo-ai/lingvo/internal/ai"
 )
 
-func Start(database *sqlx.DB, botToken string, sugar *zap.SugaredLogger) {
+var botTokenGlobal string
+
+func Start(database *sqlx.DB, botToken, webappURL string, sugar *zap.SugaredLogger, adminIDs []int64, aiClient *ai.Client) {
+	botTokenGlobal = botToken
 	defer func() {
 		if r := recover(); r != nil {
 			sugar.Errorw("bot Start panic", "recover", r)
@@ -50,12 +55,12 @@ func Start(database *sqlx.DB, botToken string, sugar *zap.SugaredLogger) {
 			cancel()
 			return
 		case update := <-updates:
-			processUpdate(bot, database, sugar, update)
+			processUpdate(bot, database, webappURL, sugar, update, adminIDs, aiClient)
 		}
 	}
 }
 
-func processUpdate(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger, update tgbotapi.Update) {
+func processUpdate(bot *tgbotapi.BotAPI, database *sqlx.DB, webappURL string, sugar *zap.SugaredLogger, update tgbotapi.Update, adminIDs []int64, aiClient *ai.Client) {
 	defer func() {
 		if r := recover(); r != nil {
 			sugar.Errorw("bot panic recovered", "recover", r, "update_id", update.UpdateID)
@@ -69,12 +74,12 @@ func processUpdate(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLo
 	sugar.Debugw("bot message", "text", update.Message.Text, "from", update.Message.From.ID, "update_id", update.UpdateID)
 
 	if update.Message.SuccessfulPayment != nil {
-		handlePayment(bot, database, sugar, update)
+		handlePayment(bot, database, sugar, update, adminIDs)
 		return
 	}
 
 	if update.Message.IsCommand() {
-		handleCommand(bot, database, sugar, update)
+		handleCommand(bot, database, webappURL, sugar, update, aiClient)
 		return
 	}
 }

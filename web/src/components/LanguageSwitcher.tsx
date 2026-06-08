@@ -12,11 +12,11 @@ export function LanguageSwitcher() {
     <button
       onClick={toggleLang}
       style={{
-        padding: '6px 12px',
-        border: '1px solid var(--tg-border)',
-        borderRadius: 8,
-        background: 'var(--tg-secondary-bg)',
-        color: 'var(--tg-text)',
+        padding: '6px 14px',
+        border: '1px solid rgba(255,255,255,0.3)',
+        borderRadius: 10,
+        background: 'rgba(255,255,255,0.15)',
+        color: '#fff',
         fontSize: 13,
         fontWeight: 500,
         cursor: 'pointer',

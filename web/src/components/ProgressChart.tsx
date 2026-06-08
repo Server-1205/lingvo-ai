@@ -39,7 +39,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   );
 }
 
-export function ProgressChart({ data, onPeriodChange }: ProgressChartProps) {
+export function ProgressChart({ data = [], onPeriodChange }: ProgressChartProps) {
   const [period, setPeriod] = useState(7);
 
   useDebugValue(data.length > 0
@@ -102,9 +102,9 @@ export function ProgressChart({ data, onPeriodChange }: ProgressChartProps) {
           <Tooltip content={<CustomTooltip />} />
           <Bar
             dataKey="messages_sent"
-            fill="var(--tg-button)"
-            radius={[3, 3, 0, 0]}
-            maxBarSize={24}
+            fill="var(--c-primary)"
+            radius={[4, 4, 0, 0]}
+            maxBarSize={28}
           />
         </BarChart>
       </ResponsiveContainer>

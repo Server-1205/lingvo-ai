@@ -9,6 +9,7 @@
 - pnpm (или npm)
 - Telegram Bot Token (от @BotFather)
 - Gemini API Key (от [Google AI Studio](https://aistudio.google.com))
+- Python 3.10+ и `edge-tts` для озвучки: `pip install edge-tts` (опционально)
 
 ## 1. Настройка окружения
 
