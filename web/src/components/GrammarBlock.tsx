@@ -5,10 +5,16 @@ interface GrammarBlockProps {
   corrections: Correction[];
 }
 
+const typeColors: Record<string, string> = {
+  grammar: 'var(--c-primary)',
+  vocabulary: 'var(--c-secondary)',
+  spelling: 'var(--c-error)',
+};
+
 const typeLabels: Record<string, string> = {
-  grammar: '📖',
-  vocabulary: '📝',
-  spelling: '✏️',
+  grammar: 'Grammar',
+  vocabulary: 'Vocabulary',
+  spelling: 'Spelling',
 };
 
 export function GrammarBlock({ corrections }: GrammarBlockProps) {
@@ -23,40 +29,50 @@ export function GrammarBlock({ corrections }: GrammarBlockProps) {
   }
 
   return (
-    <div style={{ margin: '8px 16px' }}>
-      <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: 'var(--tg-text)' }}>
+    <div style={{ marginTop: 8 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: 'var(--c-on-surface-variant)' }}>
         {t('chat.corrections_title')}
       </div>
-      {corrections.map((c, i) => (
-        <div
-          key={i}
-          className="card"
-          style={{ margin: '8px 0', padding: 12 }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-            <span>{typeLabels[c.type] || '📌'}</span>
-            <span style={{
-              fontSize: 11,
-              background: 'var(--tg-secondary-bg)',
-              padding: '2px 6px',
-              borderRadius: 4,
-              color: 'var(--tg-hint)',
-            }}>
-              {c.type}
-            </span>
+      {corrections.map((c, i) => {
+        const color = typeColors[c.type] || 'var(--c-primary)';
+        return (
+          <div
+            key={i}
+            style={{
+              padding: 12,
+              marginBottom: 6,
+              borderRadius: 'var(--round-md)',
+              background: 'var(--c-surface-container-lowest)',
+              border: '1px solid var(--c-outline-variant)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <span style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: color,
+                background: `${color}1A`,
+                padding: '2px 8px',
+                borderRadius: 'var(--round-full)',
+                letterSpacing: '0.03em',
+                textTransform: 'uppercase',
+              }}>
+                {typeLabels[c.type] || c.type}
+              </span>
+            </div>
+            <div style={{ fontSize: 14, marginBottom: 4, lineHeight: 1.5 }}>
+              <span style={{ color: 'var(--c-error)', textDecoration: 'line-through' }}>
+                {c.original}
+              </span>
+              <span style={{ margin: '0 6px', color: 'var(--c-outline)' }}>→</span>
+              <span style={{ color: 'var(--c-tertiary)', fontWeight: 600 }}>{c.corrected}</span>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--c-on-surface-variant)', marginTop: 4, lineHeight: 1.4 }}>
+              {i18n.language === 'uz' ? c.explanation_uz : c.explanation_ru}
+            </div>
           </div>
-          <div style={{ fontSize: 13, marginBottom: 4 }}>
-            <span style={{ color: 'var(--tg-destructive)', textDecoration: 'line-through' }}>
-              {c.original}
-            </span>
-            <span style={{ margin: '0 6px', color: 'var(--tg-hint)' }}>→</span>
-            <span style={{ color: '#4caf50', fontWeight: 500 }}>{c.corrected}</span>
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--tg-hint)', marginTop: 4 }}>
-            {i18n.language === 'uz' ? c.explanation_uz : c.explanation_ru}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

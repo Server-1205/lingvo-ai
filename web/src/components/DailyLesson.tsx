@@ -76,7 +76,7 @@ export function DailyLesson({ onBack }: DailyLessonProps) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
         <div style={{ fontSize: 48 }}>📅</div>
-        <div style={{ fontSize: 17, color: 'var(--c-text-secondary)' }}>{t('common.loading')}</div>
+        <div style={{ fontSize: 17, color: 'var(--c-on-surface-variant)' }}>{t('common.loading')}</div>
       </div>
     );
   }
@@ -85,7 +85,7 @@ export function DailyLesson({ onBack }: DailyLessonProps) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
         <div style={{ fontSize: 48 }}>😕</div>
-        <div style={{ fontSize: 17, color: 'var(--c-text-secondary)', textAlign: 'center' }}>
+        <div style={{ fontSize: 17, color: 'var(--c-on-surface-variant)', textAlign: 'center' }}>
           {lang === 'ru' ? 'Не удалось загрузить урок. Попробуйте позже.' : 'Darsni yuklashda xatolik. Keyinroq urinib ko\'ring.'}
         </div>
         <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={onBack}>
@@ -100,36 +100,46 @@ export function DailyLesson({ onBack }: DailyLessonProps) {
       <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: 8 }}>
         <button
           onClick={onBack}
-          style={{ fontSize: 20, padding: '4px 8px', border: 'none', background: 'none', cursor: 'pointer' }}
+          style={{ fontSize: 20, padding: '4px 8px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--c-primary)' }}
         >
           ←
         </button>
-        <div style={{ fontSize: 20, fontWeight: 700, flex: 1 }}>{t('daily.title')}</div>
+        <div style={{ fontSize: 20, fontWeight: 700, flex: 1, color: 'var(--c-on-surface)' }}>{t('daily.title')}</div>
       </div>
 
-      <div className="card" style={{ margin: '0 16px 16px' }}>
-        <div style={{ fontSize: 13, color: 'var(--c-text-secondary)', marginBottom: 4 }}>{t('daily.topic')}</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--c-primary-dark)', marginBottom: 12 }}>
+      <div style={{
+        margin: '0 16px 16px',
+        padding: 'var(--card-padding)',
+        borderRadius: 'var(--round-lg)',
+        border: '1px solid var(--c-outline-variant)',
+        background: 'var(--c-surface-container-lowest)',
+      }}>
+        <div style={{ fontSize: 13, color: 'var(--c-on-surface-variant)', marginBottom: 4 }}>{t('daily.topic')}</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--c-primary)', marginBottom: 12 }}>
           {lesson.topic}
         </div>
 
-        <div style={{ fontSize: 12, color: 'var(--c-text-hint)', marginBottom: 8 }}>{t('daily.explanation')}</div>
-        <div style={{ fontSize: 16, lineHeight: 1.5, color: 'var(--tg-text)', marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: 'var(--c-outline)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+          {t('daily.explanation')}
+        </div>
+        <div style={{ fontSize: 16, lineHeight: 1.5, color: 'var(--c-on-surface)', marginBottom: 16 }}>
           {explanation}
         </div>
 
         {lesson.examples.length > 0 && (
           <>
-            <div style={{ fontSize: 12, color: 'var(--c-text-hint)', marginBottom: 8 }}>{t('daily.examples')}</div>
+            <div style={{ fontSize: 12, color: 'var(--c-outline)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+              {t('daily.examples')}
+            </div>
             {lesson.examples.map((ex, i) => (
               <div key={i} style={{
                 fontSize: 15,
                 fontStyle: 'italic',
-                color: 'var(--c-text-secondary)',
+                color: 'var(--c-on-surface-variant)',
                 padding: '8px 12px',
                 marginBottom: 6,
-                background: 'var(--tg-secondary-bg)',
-                borderRadius: 10,
+                background: 'var(--c-surface-container)',
+                borderRadius: 'var(--round-md)',
               }}>
                 • {ex}
               </div>
@@ -139,13 +149,19 @@ export function DailyLesson({ onBack }: DailyLessonProps) {
       </div>
 
       {lesson.exercises.length > 0 && (
-        <div className="card" style={{ margin: '0 16px 16px' }}>
-          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('daily.exercises')}</div>
+        <div style={{
+          margin: '0 16px 16px',
+          padding: 'var(--card-padding)',
+          borderRadius: 'var(--round-lg)',
+          border: '1px solid var(--c-outline-variant)',
+          background: 'var(--c-surface-container-lowest)',
+        }}>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: 'var(--c-on-surface)' }}>{t('daily.exercises')}</div>
           {lesson.exercises.map((ex, i) => {
             const isCorrect = checkedAnswers[i];
             return (
               <div key={i} style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 15, marginBottom: 8 }}>{i + 1}. {ex.question}</div>
+                <div style={{ fontSize: 15, marginBottom: 8, color: 'var(--c-on-surface)' }}>{i + 1}. {ex.question}</div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
                   {ex.options.map(opt => (
                     <button
@@ -156,13 +172,13 @@ export function DailyLesson({ onBack }: DailyLessonProps) {
                         fontSize: 14,
                         border: '2px solid',
                         borderColor: selectedAnswers[i] === opt
-                          ? (isCorrect === true ? 'var(--c-success)' : isCorrect === false ? 'var(--c-error)' : 'var(--c-primary)')
-                          : 'var(--tg-border)',
-                        borderRadius: 10,
+                          ? (isCorrect === true ? 'var(--c-tertiary)' : isCorrect === false ? 'var(--c-error)' : 'var(--c-primary)')
+                          : 'var(--c-outline-variant)',
+                        borderRadius: 'var(--round-full)',
                         background: selectedAnswers[i] === opt
-                          ? (isCorrect === true ? 'var(--c-success)' : isCorrect === false ? 'var(--c-error)' : 'var(--c-primary)')
-                          : 'var(--tg-secondary-bg)',
-                        color: selectedAnswers[i] === opt ? '#fff' : 'var(--tg-text)',
+                          ? (isCorrect === true ? 'var(--c-tertiary)' : isCorrect === false ? 'var(--c-error)' : 'var(--c-primary)')
+                          : 'var(--c-surface-container)',
+                        color: selectedAnswers[i] === opt ? '#fff' : 'var(--c-on-surface)',
                         cursor: 'pointer',
                         fontWeight: selectedAnswers[i] === opt ? 600 : 400,
                       }}
@@ -178,7 +194,7 @@ export function DailyLesson({ onBack }: DailyLessonProps) {
                       fontSize: 13,
                       padding: '4px 12px',
                       border: 'none',
-                      borderRadius: 8,
+                      borderRadius: 'var(--round-full)',
                       background: 'var(--c-primary)',
                       color: '#fff',
                       cursor: 'pointer',
@@ -188,7 +204,7 @@ export function DailyLesson({ onBack }: DailyLessonProps) {
                   </button>
                 )}
                 {isCorrect === true && (
-                  <div style={{ fontSize: 13, color: 'var(--c-success)', fontWeight: 600 }}>✅ {t('daily.correct')}</div>
+                  <div style={{ fontSize: 13, color: 'var(--c-tertiary)', fontWeight: 600 }}>✅ {t('daily.correct')}</div>
                 )}
                 {isCorrect === false && (
                   <div style={{ fontSize: 13, color: 'var(--c-error)', fontWeight: 600 }}>
@@ -202,19 +218,25 @@ export function DailyLesson({ onBack }: DailyLessonProps) {
       )}
 
       {lesson.vocabulary.length > 0 && (
-        <div className="card" style={{ margin: '0 16px 16px' }}>
-          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('daily.new_words')}</div>
+        <div style={{
+          margin: '0 16px 16px',
+          padding: 'var(--card-padding)',
+          borderRadius: 'var(--round-lg)',
+          border: '1px solid var(--c-outline-variant)',
+          background: 'var(--c-surface-container-lowest)',
+        }}>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: 'var(--c-on-surface)' }}>{t('daily.new_words')}</div>
           {lesson.vocabulary.map((v, i) => (
             <div key={i} style={{
               display: 'flex',
               justifyContent: 'space-between',
               padding: '10px 12px',
               marginBottom: 6,
-              background: 'var(--tg-secondary-bg)',
-              borderRadius: 10,
+              background: 'var(--c-surface-container)',
+              borderRadius: 'var(--round-md)',
             }}>
-              <span style={{ fontSize: 16, fontWeight: 600 }}>{v.word}</span>
-              <span style={{ fontSize: 15, color: 'var(--c-text-secondary)' }}>
+              <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-on-surface)' }}>{v.word}</span>
+              <span style={{ fontSize: 15, color: 'var(--c-on-surface-variant)' }}>
                 {lang === 'ru' ? v.translation_ru : v.translation_uz}
               </span>
             </div>

@@ -66,8 +66,8 @@ export function Onboarding({ onDone }: OnboardingProps) {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: '100%',
-      background: 'linear-gradient(180deg, var(--c-primary-dark) 0%, var(--c-primary) 50%, var(--tg-bg) 100%)',
+      height: '100svh',
+      background: 'linear-gradient(180deg, var(--c-primary) 0%, var(--c-surface) 100%)',
       padding: '24px 20px',
     }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -77,7 +77,7 @@ export function Onboarding({ onDone }: OnboardingProps) {
             style={{
               background: 'rgba(255,255,255,0.2)',
               border: 'none',
-              borderRadius: 10,
+              borderRadius: 'var(--round-full)',
               padding: '8px 16px',
               color: '#fff',
               fontSize: 14,
@@ -115,7 +115,7 @@ export function Onboarding({ onDone }: OnboardingProps) {
         <div style={{
           fontSize: 24,
           fontWeight: 700,
-          color: slide === 2 ? 'var(--tg-text)' : '#fff',
+          color: slide === 2 ? 'var(--c-on-surface)' : '#fff',
           lineHeight: 1.3,
         }}>
           {t(current.titleKey)}
@@ -123,7 +123,7 @@ export function Onboarding({ onDone }: OnboardingProps) {
 
         <div style={{
           fontSize: 15,
-          color: slide === 2 ? 'var(--c-text-secondary)' : 'rgba(255,255,255,0.8)',
+          color: slide === 2 ? 'var(--c-on-surface-variant)' : 'rgba(255,255,255,0.8)',
           lineHeight: 1.5,
           maxWidth: 300,
         }}>
@@ -143,9 +143,9 @@ export function Onboarding({ onDone }: OnboardingProps) {
               alignItems: 'center',
               gap: 10,
               fontSize: 15,
-              color: slide === 2 ? 'var(--c-text-secondary)' : 'rgba(255,255,255,0.85)',
+              color: slide === 2 ? 'var(--c-on-surface-variant)' : 'rgba(255,255,255,0.85)',
             }}>
-              <span style={{ fontSize: 18 }}>•</span>
+              <span style={{ fontSize: 18, color: 'var(--c-primary-fixed-dim)' }}>✦</span>
               <span>{t(item)}</span>
             </div>
           ))}
@@ -158,7 +158,7 @@ export function Onboarding({ onDone }: OnboardingProps) {
             <div key={i} style={{
               width: i === slide ? 24 : 8,
               height: 8,
-              borderRadius: 4,
+              borderRadius: 'var(--round-full)',
               background: i === slide
                 ? (slide === 2 ? 'var(--c-primary)' : '#fff')
                 : 'rgba(255,255,255,0.3)',
@@ -168,18 +168,17 @@ export function Onboarding({ onDone }: OnboardingProps) {
         </div>
 
         <button
-          className="btn"
           onClick={handleNext}
           style={{
             width: '100%',
             padding: '14px 0',
             fontSize: 17,
             fontWeight: 700,
-            borderRadius: 14,
-            background: slide === 2 ? 'var(--c-primary)' : 'rgba(255,255,255,0.95)',
-            color: slide === 2 ? '#fff' : 'var(--c-primary-dark)',
+            borderRadius: 'var(--round-full)',
             border: 'none',
             cursor: 'pointer',
+            background: slide === 2 ? 'var(--c-primary)' : 'rgba(255,255,255,0.95)',
+            color: slide === 2 ? '#fff' : 'var(--c-primary)',
           }}
         >
           {isLast ? t('onboarding.start') : t('onboarding.next')}

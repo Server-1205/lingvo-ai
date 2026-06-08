@@ -16,7 +16,7 @@ function determineLevel(correct: number): string {
 }
 
 export function LevelTest({ onDone }: LevelTestProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [step, setStep] = useState<'test' | 'result'>('test');
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
@@ -89,20 +89,26 @@ export function LevelTest({ onDone }: LevelTestProps) {
       <div className="scroll-area">
         <div style={{ padding: 24, textAlign: 'center' }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
-          <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: 'var(--c-on-surface)' }}>
             {t('level.result_title')}
           </div>
-          <div className="card" style={{ padding: 20, margin: '16px 0' }}>
-            <div style={{ fontSize: 14, color: 'var(--tg-hint)', marginBottom: 4 }}>
+          <div style={{
+            padding: 20,
+            margin: '16px 0',
+            borderRadius: 'var(--round-lg)',
+            border: '1px solid var(--c-outline-variant)',
+            background: 'var(--c-surface-container-lowest)',
+          }}>
+            <div style={{ fontSize: 14, color: 'var(--c-on-surface-variant)', marginBottom: 4 }}>
               {t('progress.level')}
             </div>
-            <div style={{ fontSize: 36, fontWeight: 700, color: 'var(--tg-button)', marginBottom: 8 }}>
+            <div style={{ fontSize: 36, fontWeight: 700, color: 'var(--c-primary)', marginBottom: 8 }}>
               {level.toUpperCase()}
             </div>
-            <div style={{ fontSize: 14, color: 'var(--tg-hint)' }}>
+            <div style={{ fontSize: 14, color: 'var(--c-on-surface-variant)' }}>
               {levelLabels[level]}
             </div>
-            <div style={{ fontSize: 13, color: 'var(--tg-hint)', marginTop: 12 }}>
+            <div style={{ fontSize: 13, color: 'var(--c-on-surface-variant)', marginTop: 12 }}>
               {t('level.score', { correct: correctCount, total })}
             </div>
           </div>
@@ -121,34 +127,44 @@ export function LevelTest({ onDone }: LevelTestProps) {
   }
 
   const q = questions[currentIdx];
-  const isCorrect = answers.length > 0 && answers[currentIdx - 1] === questions[currentIdx - 1]?.correct;
-  const showFeedback = currentIdx > 0 && answers.length > 0;
 
   return (
     <div className="scroll-area">
       <div style={{ padding: 16 }}>
         <div style={{
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
+          gap: 12,
           marginBottom: 16,
         }}>
-          <span style={{ fontSize: 13, color: 'var(--tg-hint)' }}>
-            {t('level.question_of', { current: currentIdx + 1, total: questions.length })}
-          </span>
-          <span style={{
-            fontSize: 11,
-            background: 'var(--tg-secondary-bg)',
-            padding: '2px 8px',
-            borderRadius: 4,
-            color: 'var(--tg-hint)',
+          <div style={{
+            flex: 1,
+            height: 6,
+            borderRadius: 'var(--round-full)',
+            background: 'var(--c-surface-container-highest)',
+            overflow: 'hidden',
           }}>
-            {q.level?.toUpperCase()}
+            <div style={{
+              width: `${((currentIdx + 1) / questions.length) * 100}%`,
+              height: '100%',
+              borderRadius: 'var(--round-full)',
+              background: 'var(--c-primary)',
+              transition: 'width 0.3s',
+            }} />
+          </div>
+          <span style={{ fontSize: 13, color: 'var(--c-on-surface-variant)', whiteSpace: 'nowrap' }}>
+            {currentIdx + 1}/{questions.length}
           </span>
         </div>
 
-        <div className="card" style={{ padding: 16, marginBottom: 16 }}>
-          <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 16, lineHeight: 1.5 }}>
+        <div style={{
+          padding: 16,
+          marginBottom: 16,
+          borderRadius: 'var(--round-lg)',
+          border: '1px solid var(--c-outline-variant)',
+          background: 'var(--c-surface-container-lowest)',
+        }}>
+          <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 16, lineHeight: 1.5, color: 'var(--c-on-surface)' }}>
             {q.question}
           </div>
 
@@ -156,16 +172,17 @@ export function LevelTest({ onDone }: LevelTestProps) {
             {q.options.map((opt, i) => (
               <button
                 key={i}
-                className="btn"
                 style={{
                   textAlign: 'left',
                   padding: '12px 14px',
-                  borderRadius: 10,
-                  border: selectedOption === i ? '2px solid var(--tg-button)' : '1px solid var(--tg-border)',
-                  background: selectedOption === i ? 'var(--tg-secondary-bg)' : 'var(--tg-bg)',
-                  color: 'var(--tg-text)',
-                  fontSize: 14,
+                  borderRadius: 'var(--round-md)',
+                  border: selectedOption === i ? '2px solid var(--c-primary)' : '1px solid var(--c-outline-variant)',
+                  background: selectedOption === i ? 'var(--c-primary-fixed)' : 'var(--c-surface-container)',
+                  color: selectedOption === i ? 'var(--c-on-primary-fixed)' : 'var(--c-on-surface)',
+                  fontSize: 15,
                   cursor: 'pointer',
+                  fontWeight: selectedOption === i ? 600 : 400,
+                  transition: 'all 0.15s',
                 }}
                 onClick={() => setSelectedOption(i)}
               >
@@ -177,21 +194,6 @@ export function LevelTest({ onDone }: LevelTestProps) {
             ))}
           </div>
         </div>
-
-        {showFeedback && (
-          <div style={{
-            padding: 12,
-            borderRadius: 10,
-            marginBottom: 16,
-            background: isCorrect ? '#1b5e2033' : '#5e1b2033',
-            fontSize: 13,
-            color: isCorrect ? '#4caf50' : 'var(--tg-destructive)',
-          }}>
-            {questions[currentIdx - 1].correct === answers[currentIdx - 1]
-              ? '✅ ' + (i18n.language === 'uz' ? questions[currentIdx - 1].explanation_uz : questions[currentIdx - 1].explanation_ru)
-              : '❌ ' + (i18n.language === 'uz' ? questions[currentIdx - 1].explanation_uz : questions[currentIdx - 1].explanation_ru)}
-          </div>
-        )}
 
         <button
           className="btn btn-primary"

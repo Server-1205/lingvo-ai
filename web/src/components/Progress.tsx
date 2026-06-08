@@ -41,31 +41,30 @@ export function ProgressView({ onStartLevelTest }: ProgressViewProps) {
       )}
 
       {progress && (
-        <div className="card" style={{ display: 'flex', justifyContent: 'space-around', padding: '24px 12px' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--c-primary)' }}>
-              {progress.level?.toUpperCase()}
+        <div style={{
+          margin: '0 16px 16px',
+          padding: '24px 12px',
+          borderRadius: 'var(--round-lg)',
+          border: '1px solid var(--c-outline-variant)',
+          background: 'var(--c-surface-container-lowest)',
+          display: 'flex',
+          justifyContent: 'space-around',
+        }}>
+          {[
+            { value: progress.level?.toUpperCase() || '?', label: t('progress.level') },
+            { value: progress.messages_sent, label: t('progress.messages') },
+            { value: progress.words_learned, label: t('progress.words') },
+            { value: progress.streak_days, label: t('progress.streak') },
+          ].map((stat, i) => (
+            <div key={i} style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--c-primary)' }}>
+                {stat.value}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--c-on-surface-variant)', marginTop: 4, fontWeight: 500 }}>
+                {stat.label}
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--c-text-secondary)', marginTop: 4, fontWeight: 500 }}>{t('progress.level')}</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--c-primary)' }}>
-              {progress.messages_sent}
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--c-text-secondary)', marginTop: 4, fontWeight: 500 }}>{t('progress.messages')}</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--c-primary)' }}>
-              {progress.words_learned}
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--c-text-secondary)', marginTop: 4, fontWeight: 500 }}>{t('progress.words')}</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--c-primary)' }}>
-              {progress.streak_days}
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--c-text-secondary)', marginTop: 4, fontWeight: 500 }}>{t('progress.streak')}</div>
-          </div>
+          ))}
         </div>
       )}
 

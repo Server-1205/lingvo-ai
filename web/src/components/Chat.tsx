@@ -141,6 +141,9 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
     }
   };
 
+  const sendIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+  const micIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', flex: 1, paddingBottom: 'calc(var(--nav-height) + var(--safe-bottom))' }}>
       <div
@@ -161,15 +164,17 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
               justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
             }}>
               <div style={{
-                maxWidth: '80%',
+                maxWidth: '85%',
                 padding: '12px 18px',
-                borderRadius: msg.role === 'user' ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                background: msg.role === 'user' ? 'var(--tg-button)' : 'var(--tg-secondary-bg)',
-                color: msg.role === 'user' ? 'var(--tg-button-text)' : 'var(--tg-text)',
-                fontSize: 17,
+                borderRadius: msg.role === 'user'
+                  ? 'var(--round-lg) var(--round-lg) var(--round-sm) var(--round-lg)'
+                  : 'var(--round-lg) var(--round-lg) var(--round-lg) var(--round-sm)',
+                background: msg.role === 'user' ? 'var(--c-primary)' : 'var(--c-surface-container)',
+                color: msg.role === 'user' ? '#fff' : 'var(--c-on-surface)',
+                fontSize: 16,
                 lineHeight: 1.5,
                 whiteSpace: 'pre-wrap',
-                boxShadow: msg.role === 'ai' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                boxShadow: msg.role === 'ai' ? 'var(--shadow-sm)' : 'var(--shadow-sm)',
               }}>
                 {msg.text}
               </div>
@@ -233,64 +238,79 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
           onSubmit={handleSubmit}
           style={{
             display: 'flex',
-            gap: 10,
+            gap: 8,
             padding: '10px 16px',
             paddingBottom: 'calc(10px + var(--safe-bottom))',
             borderTop: '1px solid var(--tg-border)',
             background: 'var(--tg-bg)',
+            alignItems: 'flex-end',
           }}
         >
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            placeholder={t('chat.input_placeholder')}
-            style={{
-              flex: 1,
-              padding: '12px 16px',
-              border: '2px solid var(--tg-border)',
-              borderRadius: 14,
-              background: 'var(--tg-secondary-bg)',
-              color: 'var(--tg-text)',
-              fontSize: 16,
-              outline: 'none',
-            }}
-          />
-          {hasSpeechSupport && (
-            <button
-              type="button"
-              onClick={handleVoice}
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '0 4px 0 16px',
+            borderRadius: 'var(--round-full)',
+            background: 'var(--c-surface-container)',
+            border: '1px solid var(--c-outline-variant)',
+          }}>
+            <input
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder={t('chat.input_placeholder')}
               style={{
-                padding: '8px 10px',
-                fontSize: 18,
-                lineHeight: 1,
+                flex: 1,
+                padding: '12px 0',
                 border: 'none',
-                borderRadius: 12,
-                background: isListening ? 'var(--c-error)' : 'var(--tg-secondary-bg)',
-                cursor: 'pointer',
-                minWidth: 40,
+                background: 'transparent',
+                color: 'var(--c-on-surface)',
+                fontSize: 16,
+                outline: 'none',
               }}
-              title={t('chat.voice_input')}
-            >
-              {isListening ? '🔴' : '🎤'}
-            </button>
-          )}
+            />
+            {hasSpeechSupport && (
+              <button
+                type="button"
+                onClick={handleVoice}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 36,
+                  height: 36,
+                  border: 'none',
+                  borderRadius: '50%',
+                  background: isListening ? 'var(--c-error)' : 'transparent',
+                  color: isListening ? '#fff' : 'var(--c-outline)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+                title={t('chat.voice_input')}
+                dangerouslySetInnerHTML={{ __html: micIcon }}
+              />
+            )}
+          </div>
           <button
             type="submit"
             disabled={!input.trim() || isStreaming}
             style={{
-              padding: '8px 12px',
-              fontSize: 20,
-              lineHeight: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 44,
+              height: 44,
               border: 'none',
-              borderRadius: 12,
-              background: input.trim() && !isStreaming ? 'var(--c-primary)' : 'var(--tg-secondary-bg)',
-              color: input.trim() && !isStreaming ? '#fff' : 'var(--tg-hint)',
-              cursor: 'pointer',
-              minWidth: 40,
+              borderRadius: '50%',
+              background: input.trim() && !isStreaming ? 'var(--c-primary)' : 'var(--c-surface-container)',
+              color: input.trim() && !isStreaming ? '#fff' : 'var(--c-outline)',
+              cursor: input.trim() && !isStreaming ? 'pointer' : 'default',
+              flexShrink: 0,
+              transition: 'background 0.2s, color 0.2s',
             }}
-          >
-            ➡️
-          </button>
+            dangerouslySetInnerHTML={{ __html: sendIcon }}
+          />
         </form>
       )}
     </div>

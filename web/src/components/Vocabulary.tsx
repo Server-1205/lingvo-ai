@@ -98,7 +98,6 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
             className="btn"
             style={{ fontSize: 12, padding: '4px 10px' }}
             onClick={() => {
-              console.debug('[vocab] export clicked');
               const a = document.createElement('a');
               const headers: Record<string, string> = {};
               const raw = initData.raw();
@@ -123,36 +122,32 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
       </div>
 
       <div style={{ display: 'flex', margin: '0 16px 16px', gap: 8 }}>
-        <button
-          className={`btn ${tab === 'my' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 600 }}
-          onClick={() => setTab('my')}
-        >
-          {t('vocab.my_words')}
-        </button>
-        <button
-          className={`btn ${tab === 'lookup' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 600 }}
-          onClick={() => setTab('lookup')}
-        >
-          {t('vocab.lookup_tab')}
-        </button>
-        <button
-          className={`btn ${tab === 'review' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 600, position: 'relative' }}
-          onClick={() => { setTab('review'); setReviewIndex(0); }}
-        >
-          {t('vocab.review')}
-          {dueList.length > 0 && tab !== 'review' && (
-            <span style={{
-              position: 'absolute', top: -4, right: -4,
-              background: 'var(--tg-destructive)', color: '#fff',
-              fontSize: 10, padding: '1px 5px', borderRadius: 8, fontWeight: 600,
-            }}>
-              {dueList.length}
-            </span>
-          )}
-        </button>
+        {(['my', 'lookup', 'review'] as const).map((tKey) => (
+          <button
+            key={tKey}
+            className={`btn ${tab === tKey ? 'btn-primary' : 'btn-secondary'}`}
+            style={{
+              flex: 1,
+              padding: '10px 0',
+              fontSize: 14,
+              fontWeight: 600,
+              position: 'relative',
+              borderRadius: 'var(--round-full)',
+            }}
+            onClick={() => { setTab(tKey); if (tKey === 'review') setReviewIndex(0); }}
+          >
+            {tKey === 'my' ? t('vocab.my_words') : tKey === 'lookup' ? t('vocab.lookup_tab') : t('vocab.review')}
+            {tKey === 'review' && dueList.length > 0 && tab !== 'review' && (
+              <span style={{
+                position: 'absolute', top: -4, right: -4,
+                background: 'var(--c-error)', color: '#fff',
+                fontSize: 10, padding: '1px 5px', borderRadius: 8, fontWeight: 600,
+              }}>
+                {dueList.length}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       {tab === 'my' && (
@@ -172,34 +167,42 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
           )}
 
           {words.map((w: VocabWord) => (
-            <div key={w.id} className="card" style={{ margin: '10px 16px', padding: 16 }}>
+            <div key={w.id} style={{
+              margin: '8px 16px',
+              padding: 'var(--card-padding)',
+              borderRadius: 'var(--round-lg)',
+              border: '1px solid var(--c-outline-variant)',
+              background: 'var(--c-surface-container-lowest)',
+            }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--tg-text)' }}>{w.word}</div>
-                  <div style={{ fontSize: 16, color: 'var(--c-text-secondary)', marginTop: 4 }}>{tr(w)}</div>
-                  <div style={{ fontSize: 15, color: 'var(--c-text-hint)', marginTop: 6, fontStyle: 'italic' }}>
-                    {ex(w)}
-                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--c-on-surface)' }}>{w.word}</div>
+                  <div style={{ fontSize: 16, color: 'var(--c-on-surface-variant)', marginTop: 4 }}>{tr(w)}</div>
+                  {ex(w) && (
+                    <div style={{ fontSize: 15, color: 'var(--c-outline)', marginTop: 6, fontStyle: 'italic' }}>
+                      {ex(w)}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                     {w.level && (
                       <span style={{
                         fontSize: 12,
-                        background: 'var(--c-primary-light)',
-                        color: 'var(--c-primary-dark)',
-                        padding: '2px 8px',
-                        borderRadius: 6,
                         fontWeight: 600,
+                        background: 'var(--c-primary-fixed-dim)',
+                        color: 'var(--c-on-primary-fixed)',
+                        padding: '2px 10px',
+                        borderRadius: 'var(--round-full)',
                       }}>
                         {w.level.toUpperCase()}
                       </span>
                     )}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6, marginLeft: 12 }}>
+                <div style={{ display: 'flex', gap: 6, marginLeft: 12, alignItems: 'center' }}>
                   {!isLoading && (
                     <button
                       className="btn"
-                      style={{ fontSize: 16, padding: '6px 10px', lineHeight: 1, borderRadius: 10 }}
+                      style={{ fontSize: 16, padding: '6px 10px', lineHeight: 1, borderRadius: 'var(--round-md)' }}
                       onClick={() => playTTS(w.word)}
                       disabled={ttsPlaying}
                     >
@@ -208,7 +211,7 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
                   )}
                   <button
                     className="btn"
-                    style={{ fontSize: 12, padding: '6px 10px', color: 'var(--tg-destructive)', borderRadius: 10 }}
+                    style={{ fontSize: 12, padding: '6px 10px', color: 'var(--c-error)', borderRadius: 'var(--round-md)' }}
                     onClick={() => deleteMutation.mutate(w.id)}
                   >
                     {t('vocab.delete')}
@@ -249,7 +252,7 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
 
           {dueList.length > 0 && reviewIndex < dueList.length && (
             <div>
-              <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--tg-hint)', padding: '8px 0' }}>
+              <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--c-on-surface-variant)', padding: '8px 0' }}>
                 {t('vocab.review_progress', { current: reviewIndex + 1, total: dueList.length })}
               </div>
               <ReviewCard
@@ -266,21 +269,30 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
       {tab === 'lookup' && (
         <div style={{ padding: '0 16px' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <input
-              value={lookupWord}
-              onChange={e => { setLookupWord(e.target.value); setAddedWord(null); setAddError(null); }}
-              placeholder={t('vocab.lookup_placeholder')}
-              style={{
-                flex: 1,
-                padding: '10px 14px',
-                border: '1px solid var(--tg-border)',
-                borderRadius: 10,
-                background: 'var(--tg-secondary-bg)',
-                color: 'var(--tg-text)',
-                fontSize: 15,
-                outline: 'none',
-              }}
-            />
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 16px',
+              borderRadius: 'var(--round-full)',
+              background: 'var(--c-surface-container)',
+              border: '1px solid var(--c-outline-variant)',
+            }}>
+              <input
+                value={lookupWord}
+                onChange={e => { setLookupWord(e.target.value); setAddedWord(null); setAddError(null); }}
+                placeholder={t('vocab.lookup_placeholder')}
+                style={{
+                  flex: 1,
+                  padding: '12px 0',
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--c-on-surface)',
+                  fontSize: 15,
+                  outline: 'none',
+                }}
+              />
+            </div>
             <button
               className="btn btn-primary"
               style={{ padding: '10px 16px' }}
@@ -299,21 +311,31 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
           )}
 
           {addError && !addMutation.isPending && (
-            <div className="card" style={{ padding: 16, textAlign: 'center' }}>
-              <div style={{ fontSize: 24, marginBottom: 8 }}>🚫</div>
-              <div style={{ fontSize: 14, color: '#e53935', fontWeight: 600 }}>
+            <div style={{
+              padding: 16,
+              borderRadius: 'var(--round-lg)',
+              border: '1px solid var(--c-error-container)',
+              background: 'var(--c-error-container)',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 14, color: 'var(--c-on-error-container)', fontWeight: 600 }}>
                 {t(addError)}
               </div>
             </div>
           )}
 
           {addedWord && !addMutation.isPending && (
-            <div className="card" style={{ padding: 16, textAlign: 'center' }}>
-              <div style={{ fontSize: 24, marginBottom: 8 }}>✅</div>
-              <div style={{ fontSize: 14, color: '#4caf50', fontWeight: 600 }}>
+            <div style={{
+              padding: 16,
+              borderRadius: 'var(--round-lg)',
+              border: '1px solid var(--c-tertiary-container)',
+              background: 'var(--c-tertiary-container)',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 14, color: 'var(--c-on-tertiary-container)', fontWeight: 600 }}>
                 {t('vocab.saved')}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--tg-hint)', marginTop: 4 }}>
+              <div style={{ fontSize: 13, color: 'var(--c-on-surface-variant)', marginTop: 4 }}>
                 {addedWord}
               </div>
             </div>

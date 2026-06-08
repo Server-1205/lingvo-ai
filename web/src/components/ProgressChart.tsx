@@ -1,5 +1,5 @@
 import { useState, useDebugValue } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import type { DailyProgressEntry } from '../api/client';
 
 interface ProgressChartProps {
@@ -24,17 +24,17 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   const dateStr = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
   return (
     <div style={{
-      background: 'var(--tg-bg)',
-      border: '1px solid var(--tg-border)',
-      borderRadius: 8,
+      background: 'var(--c-surface-container-lowest)',
+      border: '1px solid var(--c-outline-variant)',
+      borderRadius: 'var(--round-md)',
       padding: '8px 12px',
       fontSize: 13,
-      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+      boxShadow: 'var(--shadow-md)',
     }}>
-      <div style={{ fontWeight: 600, marginBottom: 4, color: 'var(--tg-text)' }}>{dateStr}</div>
-      <div style={{ color: 'var(--tg-hint)' }}>Сообщения: {entry.messages_sent}</div>
-      <div style={{ color: 'var(--tg-hint)' }}>Слова: {entry.words_learned}</div>
-      <div style={{ color: 'var(--tg-hint)' }}>Тесты: {entry.quizzes_taken}</div>
+      <div style={{ fontWeight: 600, marginBottom: 4, color: 'var(--c-on-surface)' }}>{dateStr}</div>
+      <div style={{ color: 'var(--c-on-surface-variant)' }}>Messages: {entry.messages_sent}</div>
+      <div style={{ color: 'var(--c-on-surface-variant)' }}>Words: {entry.words_learned}</div>
+      <div style={{ color: 'var(--c-on-surface-variant)' }}>Quizzes: {entry.quizzes_taken}</div>
     </div>
   );
 }
@@ -59,45 +59,61 @@ export function ProgressChart({ data = [], onPeriodChange }: ProgressChartProps)
 
   if (data.length === 0) {
     return (
-      <div className="card" style={{ padding: 20, textAlign: 'center' }}>
-        <div style={{ fontSize: 13, color: 'var(--tg-hint)' }}>
-          Нет данных об активности за выбранный период
+      <div style={{
+        margin: '0 16px 16px',
+        padding: 20,
+        borderRadius: 'var(--round-lg)',
+        border: '1px solid var(--c-outline-variant)',
+        background: 'var(--c-surface-container-lowest)',
+        textAlign: 'center',
+      }}>
+        <div style={{ fontSize: 13, color: 'var(--c-on-surface-variant)' }}>
+          No data for this period
         </div>
       </div>
     );
   }
 
   return (
-    <div className="card" style={{ padding: '16px 8px' }}>
+    <div style={{
+      margin: '0 16px 16px',
+      padding: '16px 8px',
+      borderRadius: 'var(--round-lg)',
+      border: '1px solid var(--c-outline-variant)',
+      background: 'var(--c-surface-container-lowest)',
+    }}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, justifyContent: 'center' }}>
         <button
           className={period === 7 ? 'btn btn-primary' : 'btn btn-secondary'}
           style={{ fontSize: 12, padding: '4px 12px' }}
           onClick={() => handlePeriodChange(7)}
         >
-          7 дней
+          7 days
         </button>
         <button
           className={period === 30 ? 'btn btn-primary' : 'btn btn-secondary'}
           style={{ fontSize: 12, padding: '4px 12px' }}
           onClick={() => handlePeriodChange(30)}
         >
-          30 дней
+          30 days
         </button>
       </div>
 
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: -16 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--tg-border)" />
           <XAxis
             dataKey="date"
             tickFormatter={formatDate}
-            tick={{ fontSize: 11, fill: 'var(--tg-hint)' }}
+            tick={{ fontSize: 11, fill: 'var(--c-on-surface-variant)' }}
             interval="preserveStartEnd"
+            axisLine={{ stroke: 'var(--c-outline-variant)' }}
+            tickLine={false}
           />
           <YAxis
             allowDecimals={false}
-            tick={{ fontSize: 11, fill: 'var(--tg-hint)' }}
+            tick={{ fontSize: 11, fill: 'var(--c-on-surface-variant)' }}
+            axisLine={false}
+            tickLine={false}
           />
           <Tooltip content={<CustomTooltip />} />
           <Bar
