@@ -1,0 +1,96 @@
+:root {
+  /* ---- Color Palette (Stitch Lingvo AI Design System) ---- */
+
+  --c-primary: #00685f;
+  --c-primary-container: #008378;
+  --c-primary-fixed: #89f5e7;
+  --c-primary-fixed-dim: #6bd8cb;
+  --c-on-primary: #ffffff;
+  --c-on-primary-container: #f4fffc;
+  --c-on-primary-fixed: #00201d;
+  --c-on-primary-fixed-variant: #005049;
+
+  --c-secondary: #9d4300;
+  --c-secondary-container: #fd761a;
+  --c-on-secondary: #ffffff;
+  --c-on-secondary-container: #5c2400;
+
+  --c-tertiary: #006b2d;
+  --c-tertiary-container: #00873b;
+  --c-on-tertiary: #ffffff;
+  --c-on-tertiary-container: #f7fff3;
+
+  --c-surface: #f5faf8;
+  --c-surface-dim: #d6dbd9;
+  --c-surface-bright: #f5faf8;
+  --c-surface-container-lowest: #ffffff;
+  --c-surface-container-low: #f0f5f2;
+  --c-surface-container: #eaefed;
+  --c-surface-container-high: #e4e9e7;
+  --c-surface-container-highest: #dee4e1;
+  --c-on-surface: #171d1c;
+  --c-on-surface-variant: #3d4947;
+
+  --c-inverse-surface: #2c3130;
+  --c-inverse-on-surface: #edf2f0;
+  --c-inverse-primary: #6bd8cb;
+
+  --c-outline: #6d7a77;
+  --c-outline-variant: #bcc9c6;
+  --c-surface-tint: #006a61;
+  --c-surface-variant: #dee4e1;
+
+  --c-background: #f5faf8;
+  --c-on-background: #171d1c;
+
+  --c-error: #ba1a1a;
+  --c-on-error: #ffffff;
+  --c-error-container: #ffdad6;
+  --c-on-error-container: #93000a;
+
+  --c-hint: #9E9E9E;
+
+  /* ---- Typography ---- */
+  --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-headline-lg: 700 24px/32px var(--font-family);
+  --font-headline-md: 600 20px/28px var(--font-family);
+  --font-body-lg: 400 16px/24px var(--font-family);
+  --font-label-md: 500 14px/20px var(--font-family);
+  --font-label-sm: 600 12px/16px var(--font-family);
+  --font-word-card-title: 700 18px/24px var(--font-family);
+
+  /* ---- Rounding ---- */
+  --round-sm: 4px;
+  --round-md: 8px;
+  --round-lg: 12px;
+  --round-xl: 16px;
+  --round-full: 9999px;
+
+  /* ---- Spacing ---- */
+  --space-unit: 4px;
+  --gutter: 16px;
+  --card-padding: 20px;
+  --nav-height: 64px;
+  --stack-gap: 12px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --header-height: 56px;
+
+  /* ---- Shadows ---- */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  /* ---- Telegram Theme Variables (overrides) ---- */
+  --tg-bg: var(--c-surface);
+  --tg-text: var(--c-on-surface);
+  --tg-hint: var(--c-hint);
+  --tg-link: var(--c-primary);
+  --tg-button: var(--c-primary);
+  --tg-button-text: var(--c-on-primary);
+  --tg-secondary-bg: var(--c-surface-container);
+  --tg-section-bg: var(--c-surface-container-lowest);
+  --tg-destructive: var(--c-error);
+  --tg-accent: var(--c-primary);
+  --tg-border: var(--c-outline-variant);
+}

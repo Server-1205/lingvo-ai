@@ -1,36 +1,7 @@
+@import './styles/tokens.css';
+
 :root {
-  --c-primary: #00BFA5;
-  --c-primary-dark: #00897B;
-  --c-primary-light: #B2DFDB;
-  --c-accent: #FF6D00;
-  --c-accent-light: #FF9100;
-  --c-success: #00C853;
-  --c-error: #E53935;
-  --c-bg: #F5F5F5;
-  --c-card: #FFFFFF;
-  --c-text: #212121;
-  --c-text-secondary: #616161;
-  --c-text-hint: #9E9E9E;
-  --c-border: #E0E0E0;
-
-  --tg-bg: var(--tg-theme-bg-color, var(--c-bg));
-  --tg-text: var(--tg-theme-text-color, var(--c-text));
-  --tg-hint: var(--tg-theme-hint-color, var(--c-text-hint));
-  --tg-link: var(--tg-theme-link-color, var(--c-primary));
-  --tg-button: var(--tg-theme-button-color, var(--c-primary));
-  --tg-button-text: var(--tg-theme-button-text-color, #fff);
-  --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #EEEEEE);
-  --tg-section-bg: var(--tg-theme-section-bg-color, var(--c-card));
-  --tg-destructive: var(--tg-theme-destructive-text-color, var(--c-error));
-  --tg-accent: var(--tg-theme-accent-text-color, var(--c-primary));
-  --tg-border: var(--tg-theme-section-separator-color, var(--c-border));
-
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-top: env(safe-area-inset-top, 0px);
-  --nav-height: 72px;
-  --header-height: 56px;
-
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-family);
   font-size: 18px;
   line-height: 1.5;
   color: var(--tg-text);
@@ -76,10 +47,11 @@ a {
 
 .card {
   background: var(--tg-section-bg);
-  border-radius: 16px;
-  padding: 20px;
-  margin: 10px 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-radius: var(--round-lg);
+  padding: var(--card-padding);
+  margin: 10px var(--gutter);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--c-outline-variant);
 }
 
 .btn {
@@ -88,11 +60,12 @@ a {
   justify-content: center;
   padding: 12px 24px;
   border: none;
-  border-radius: 14px;
+  border-radius: var(--round-full);
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.2s, transform 0.1s;
+  line-height: 1.2;
 }
 
 .btn:active {
@@ -111,7 +84,7 @@ a {
 }
 
 .btn-destructive {
-  background: var(--tg-destructive);
+  background: var(--c-error);
   color: #fff;
 }
 
@@ -163,5 +136,5 @@ a {
 
 .review-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  box-shadow: var(--shadow-md);
 }

@@ -19,7 +19,7 @@ function App() {
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('lingvo_onboarding_done'));
   const [vocabInitialTab, setVocabInitialTab] = useState<'my' | 'lookup' | 'review' | undefined>(undefined);
   const { t, i18n } = useTranslation();
-  const { user, theme } = useTelegram();
+  const { user } = useTelegram();
 
   useEffect(() => {
     const tgLang = initData.user()?.language_code;
@@ -49,8 +49,6 @@ function App() {
     }
   }, []);
 
-  const textColor = theme?.text_color || 'var(--tg-text)';
-
   if (showOnboarding) {
     return <Onboarding onDone={() => setShowOnboarding(false)} />;
   }
@@ -61,7 +59,7 @@ function App() {
       flexDirection: 'column',
       minHeight: '100svh',
       background: 'var(--tg-bg)',
-      color: textColor,
+      color: 'var(--tg-text)',
     }}>
       <header style={{
         display: 'flex',
@@ -69,13 +67,13 @@ function App() {
         justifyContent: 'space-between',
         padding: '10px 16px',
         paddingTop: 'calc(var(--safe-top) + 6px)',
-        background: 'linear-gradient(135deg, var(--c-primary-dark), var(--c-primary))',
-        borderBottom: 'none',
+        background: 'var(--c-primary)',
         minHeight: 'var(--header-height)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 24 }}>✨</span>
-          <span style={{ fontSize: 19, fontWeight: 700, color: '#fff' }}>{t('app.title')}</span>
+          <span style={{ fontWeight: 700, fontSize: 19, color: '#fff' }}>
+            {t('app.title')}
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {user && (

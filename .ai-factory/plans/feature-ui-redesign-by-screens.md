@@ -42,6 +42,7 @@ Rationale: "Полный редизайн всех экранов через Goo
 ## Фаза 0: CSS-токены и шрифты
 
 ### Задача 0.1: Создать CSS-токены из Stitch Design System
+- [x] Создан `web/src/styles/tokens.css` с полной палитрой Stitch DS
 
 **Файлы:**
 - `web/src/styles/tokens.css` — новый файл с CSS custom properties
@@ -62,21 +63,14 @@ Rationale: "Полный редизайн всех экранов через Goo
 - Удалить старые переменные (--c-primary: #00BFA5 и т.д.)
 
 ### Задача 0.2: Добавить Plus Jakarta Sans
-
-**Файлы:**
-- `web/index.html` — Google Fonts link
-
-**Что сделать:**
-- Добавить `<link>` для Plus Jakarta Sans (400, 500, 600, 700) из Google Fonts в `<head>`
-- Убедиться, что `font-display: swap` для предотвращения FOIT
-
-**Логирование:** `console.debug('[tokens] font loaded: Plus Jakarta Sans')`
+- [x] Google Fonts link добавлен в `web/index.html`
 
 ---
 
 ## Фаза 1: NavBar
 
 ### Задача 1.1: Полностью заменить NavBar на Stitch-дизайн
+- [x] NavBar переписан: stroke-иконки, blur, dot-индикатор
 
 **Файлы:**
 - `web/src/components/NavBar.tsx` — полная замена JSX
@@ -98,6 +92,7 @@ Rationale: "Полный редизайн всех экранов через Goo
 ## Фаза 2: App.tsx — хедер и лайаут
 
 ### Задача 2.1: Обновить корневой лайаут
+- [x] App.tsx обновлён: новый хедер, Stitch-токены
 
 **Файлы:**
 - `web/src/App.tsx` — обновление JSX
