@@ -8,14 +8,22 @@ import { Vocabulary } from './components/Vocabulary';
 import { ProgressView } from './components/Progress';
 import { SubscriptionPlans } from './components/Subscription';
 import { LevelTest } from './components/LevelTest';
+import { IeltsDashboard } from './components/IeltsDashboard';
 import { useTelegram } from './hooks/useTelegram';
+import { getSubscription } from './api/client';
+import type { SubscriptionResponse } from './api/client';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('chat');
   const [showLevelTest, setShowLevelTest] = useState(false);
   const [vocabInitialTab, setVocabInitialTab] = useState<'my' | 'lookup' | 'review' | undefined>(undefined);
+  const [subscription, setSubscription] = useState<SubscriptionResponse | null>(null);
   const { t } = useTranslation();
   const { user, theme } = useTelegram();
+
+  useEffect(() => {
+    getSubscription().then(setSubscription).catch(() => {});
+  }, []);
 
   useEffect(() => {
     try {
@@ -86,11 +94,12 @@ function App() {
             {activeTab === 'vocab' && <Vocabulary initialTab={vocabInitialTab} />}
             {activeTab === 'progress' && <ProgressView onStartLevelTest={() => setShowLevelTest(true)} />}
             {activeTab === 'subscription' && <SubscriptionPlans />}
+            {activeTab === 'ielts' && <IeltsDashboard />}
           </>
         )}
       </main>
 
-      {!showLevelTest && <NavBar active={activeTab} onTabChange={setActiveTab} />}
+      {!showLevelTest && <NavBar active={activeTab} onTabChange={setActiveTab} isPremium={subscription?.active || false} />}
     </div>
   );
 }

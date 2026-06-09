@@ -369,4 +369,151 @@ export async function submitReview(wordId: number, quality: number): Promise<Rev
   });
 }
 
+export interface IeltsWritingRequest {
+  type: 'task1' | 'task2';
+  user_text: string;
+  task_description?: string;
+}
+
+export interface IeltsWritingCriteria {
+  task_achievement: number;
+  coherence_cohesion: number;
+  lexical_resource: number;
+  grammatical_range: number;
+}
+
+export interface IeltsWritingResponse {
+  band_score: number;
+  criteria: IeltsWritingCriteria;
+  feedback: string;
+  corrections: Correction[];
+  improvement_tips: string[];
+}
+
+export interface IeltsSpeakingQuestionsResponse {
+  part: number;
+  questions: string[];
+  cue_card?: string;
+}
+
+export interface IeltsSpeakingRequest {
+  part: number;
+  question: string;
+  user_response: string;
+}
+
+export interface IeltsSpeakingCriteria {
+  fluency_coherence: number;
+  lexical_resource: number;
+  grammatical_range: number;
+  pronunciation: number;
+}
+
+export interface IeltsSpeakingResponse {
+  band_score: number;
+  criteria: IeltsSpeakingCriteria;
+  feedback: string;
+  improvement_tips: string[];
+}
+
+export interface IeltsReadingQuestion {
+  type: string;
+  question: string;
+  options: string[];
+  correct: number;
+}
+
+export interface IeltsReadingPassage {
+  title: string;
+  passage: string;
+  word_count: number;
+  questions: IeltsReadingQuestion[];
+}
+
+export interface IeltsReadingSubmitRequest {
+  passage: string;
+  questions: IeltsReadingQuestion[];
+  user_answers: number[];
+}
+
+export interface IeltsQuestionResult {
+  question_index: number;
+  user_answer: number;
+  correct_answer: number;
+  is_correct: boolean;
+  explanation_uz: string;
+  explanation_ru: string;
+}
+
+export interface IeltsReadingResult {
+  correct_answers: number;
+  total_questions: number;
+  band_score: number;
+  results: IeltsQuestionResult[];
+  feedback: string;
+}
+
+export interface IeltsScoreEntry {
+  id: number;
+  user_id: number;
+  module: string;
+  band_score: number;
+  details: string;
+  prompt: string;
+  user_response: string;
+  feedback: string;
+  created_at: string;
+}
+
+export interface IeltsScoreStats {
+  writing_task1_avg: number;
+  writing_task2_avg: number;
+  speaking_avg: number;
+  reading_avg: number;
+  total_practices: number;
+}
+
+export interface IeltsScoresResponse {
+  entries: IeltsScoreEntry[];
+  total: number;
+  stats?: IeltsScoreStats;
+}
+
+export async function getIeltsWriting(req: IeltsWritingRequest): Promise<IeltsWritingResponse> {
+  return request<IeltsWritingResponse>('/api/ielts/writing', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+export async function getIeltsSpeakingQuestions(part: number): Promise<IeltsSpeakingQuestionsResponse> {
+  return request<IeltsSpeakingQuestionsResponse>(`/api/ielts/speaking?part=${part}`);
+}
+
+export async function submitIeltsSpeaking(req: IeltsSpeakingRequest): Promise<IeltsSpeakingResponse> {
+  return request<IeltsSpeakingResponse>('/api/ielts/speaking', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+export async function getIeltsReading(): Promise<IeltsReadingPassage> {
+  return request<IeltsReadingPassage>('/api/ielts/reading');
+}
+
+export async function submitIeltsReading(req: IeltsReadingSubmitRequest): Promise<IeltsReadingResult> {
+  return request<IeltsReadingResult>('/api/ielts/reading/submit', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+export async function getIeltsScores(module?: string, page?: number, perPage?: number): Promise<IeltsScoresResponse> {
+  const params = new URLSearchParams();
+  if (module) params.set('module', module);
+  if (page) params.set('page', String(page));
+  if (perPage) params.set('per_page', String(perPage));
+  return request<IeltsScoresResponse>(`/api/ielts/scores?${params}`);
+}
+
 export { ApiError };
