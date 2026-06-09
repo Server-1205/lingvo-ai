@@ -15,19 +15,19 @@ const mockData = [
 describe('ProgressChart', () => {
   it('renders chart with data', () => {
     render(<ProgressChart data={mockData} />);
-    expect(screen.getByText('7 дней')).toBeInTheDocument();
-    expect(screen.getByText('30 дней')).toBeInTheDocument();
+    expect(screen.getByText('7 days')).toBeInTheDocument();
+    expect(screen.getByText('30 days')).toBeInTheDocument();
   });
 
   it('shows empty state when no data', () => {
     render(<ProgressChart data={[]} />);
-    expect(screen.getByText('Нет данных об активности за выбранный период')).toBeInTheDocument();
+    expect(screen.getByText('No data for this period')).toBeInTheDocument();
   });
 
   it('calls onPeriodChange when period button clicked', () => {
     const onPeriodChange = vi.fn();
     render(<ProgressChart data={mockData} onPeriodChange={onPeriodChange} />);
-    screen.getByText('30 дней').click();
+    screen.getByText('30 days').click();
     expect(onPeriodChange).toHaveBeenCalledWith(30);
   });
 });

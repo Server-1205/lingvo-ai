@@ -256,6 +256,29 @@ hello,salom,Hello world!,a1,3,,2026-06-01
 {"invoice_link": "tg://pay?invoice=...", "stars": 800}
 ```
 
+---
+
+### GET /api/tts
+
+Озвучивание текста (Text-to-Speech) через edge-tts.
+
+**Query Parameters:**
+- `text` (string, required) — текст для озвучивания (макс. 500 символов)
+- `lang` (string, optional, default: `uz`) — язык: `uz` или `ru`
+
+**Response:**
+- `200` — аудиофайл в формате MP3 (`Content-Type: audio/mpeg`)
+
+**Errors:**
+- `400` — отсутствует `text` или текст длиннее 500 символов
+- `401` — unauthorized
+- `500` — ошибка синтеза речи (edge-tts не установлен или сбой)
+
+**Headers:**
+- `X-Telegram-Init-Data` — обязательный
+
+**Note:** Требует установленного `edge-tts` (Python): `pip install edge-tts`. Максимальная длина текста — 500 символов.
+
 ## Коды ошибок
 
 | HTTP | error | Причина |
@@ -263,7 +286,11 @@ hello,salom,Hello world!,a1,3,,2026-06-01
 | 400 | `invalid_request` | Отсутствует поле |
 | 401 | `unauthorized` | Невалидный initData |
 | 429 | `daily_limit_exceeded` | Лимит бесплатного тарифа |
+| 400 | `text_required` | Не указан text для TTS |
+| 400 | `inappropriate_word` | Неприемлемое слово |
+| 400 | `text_too_long` | Текст для TTS длиннее 500 символов |
 | 500 | `ai_service_unavailable` | Gemini недоступен |
+| 500 | `tts_failed` | Ошибка синтеза речи (edge-tts) |
 | 500 | `internal_error` | Ошибка БД/сервера |
 
 **429 Response:**

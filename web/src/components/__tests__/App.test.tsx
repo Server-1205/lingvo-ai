@@ -23,6 +23,7 @@ vi.mock('react-i18next', () => ({
         'vocab.review_easy': 'Легко',
         'chat.input_placeholder': 'Напишите...',
         'chat.send': 'Отправить',
+        'onboarding.skip': 'Пропустить',
       };
       return map[key] || key;
     },
@@ -63,8 +64,8 @@ function renderWithProviders(ui: React.ReactElement) {
 }
 
 describe('App', () => {
-  it('renders default chat tab on mount', () => {
+  it('renders onboarding on mount when not completed', () => {
     renderWithProviders(<App />);
-    expect(screen.getByText('Lingvo AI')).toBeInTheDocument();
+    expect(screen.getByText('Пропустить')).toBeInTheDocument();
   });
 });

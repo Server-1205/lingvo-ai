@@ -19,6 +19,8 @@
 | `OPENAI_MODEL` | Нет | `gpt-4o-mini` | Модель для fallback |
 | `AI_QUEUE_ENABLED` | Нет | — | Включить приоритетную очередь AI (premium → free) |
 | `DEV_MODE` | Нет | — | Режим разработчика — все фичи открыты, без лимитов (true/false) |
+| `TTS_VOICE_UZ` | Нет | `en-US-JennyNeural` | Голос edge-tts (все слова — английские) |
+| `TTS_VOICE_RU` | Нет | `en-US-JennyNeural` | Голос edge-tts (все слова — английские) |
 
 ## Файл .env
 

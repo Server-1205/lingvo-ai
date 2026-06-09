@@ -23,6 +23,19 @@
       "type": "local",
       "command": ["npx", "-y", "@anthropic-ai/sequential-thinking-mcp"],
       "enabled": true
+    },
+    "memory": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-memory"],
+      "enabled": true,
+      "env": {
+        "MEMORY_FILE_PATH": "/home/asdev/projects/sinking/.opencode/memory/memory.jsonl"
+      }
+    },
+    "stitch": {
+      "type": "remote",
+      "url": "https://stitch.googleapis.com/mcp",
+      "enabled": true
     }
   },
 

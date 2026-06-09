@@ -23,7 +23,7 @@ describe('UsageIndicator', () => {
 
   it('shows Unlimited for premium users', () => {
     render(<UsageIndicator usage={{ daily_used: 0, daily_limit: 0, is_premium: true }} />);
-    expect(screen.getByText('Unlimited')).toBeInTheDocument();
+    expect(screen.getByText(/Unlimited/)).toBeInTheDocument();
   });
 
   it('shows exhausted message and upgrade button when limit reached', () => {

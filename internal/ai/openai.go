@@ -62,7 +62,7 @@ func (o *openAIClient) Generate(ctx context.Context, prompt string) (string, err
 		Messages: []openAIMessage{
 			{Role: "user", Content: prompt},
 		},
-		Temperature: 0.4,
+		Temperature: 0.3,
 	}
 
 	payload, err := json.Marshal(body)

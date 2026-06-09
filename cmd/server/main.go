@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"context"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -12,9 +14,11 @@ import (
 
 	_ "modernc.org/sqlite"
 
+	"github.com/lingvo-ai/lingvo/internal/ai"
 	"github.com/lingvo-ai/lingvo/internal/api"
 	"github.com/lingvo-ai/lingvo/internal/bot"
 	"github.com/lingvo-ai/lingvo/internal/db"
+	"github.com/lingvo-ai/lingvo/internal/tts"
 )
 
 func loadEnv(path string) {
@@ -68,6 +72,10 @@ func main() {
 	aiQueueEnabled := os.Getenv("AI_QUEUE_ENABLED") == "true"
 	devMode := os.Getenv("DEV_MODE") == "true"
 	adminIDs := os.Getenv("ADMIN_IDS")
+	webappURL := os.Getenv("WEBAPP_URL")
+	if webappURL == "" {
+		webappURL = "https://t.me/lingvo_ai_bot/app"
+	}
 
 	// Init database
 	database, err := sqlx.Connect("sqlite", dbPath)
@@ -78,11 +86,41 @@ func main() {
 
 	db.Migrate(database, sugar)
 
+	// Init AI client
+	var aiClient *ai.Client
+	if geminiKey != "" {
+		var err error
+		aiClient, err = ai.NewClient(context.Background(), geminiKey, openAIKey, openAIBaseURL, openAIModel, sugar)
+		if err != nil {
+			sugar.Warnw("failed to init AI client, AI features disabled", "error", err)
+		} else {
+			sugar.Info("AI client initialized")
+			if aiQueueEnabled {
+				aiClient.EnableQueue(context.Background(), sugar)
+				sugar.Info("AI priority queue enabled")
+			}
+		}
+	} else {
+		sugar.Warn("GEMINI_API_KEY not set, AI features disabled")
+	}
+
 	// Init router
 	r := gin.Default()
 
-	// API routes (includes /api/health)
-	api.RegisterRoutes(r, database, geminiKey, openAIKey, openAIBaseURL, openAIModel, botToken, sugar, aiQueueEnabled, adminIDs, devMode)
+	ttsVoiceUz := os.Getenv("TTS_VOICE_UZ")
+	if ttsVoiceUz == "" {
+		ttsVoiceUz = tts.DefaultVoices.Uz
+	}
+	ttsVoiceRu := os.Getenv("TTS_VOICE_RU")
+	if ttsVoiceRu == "" {
+		ttsVoiceRu = tts.DefaultVoices.Ru
+	}
+	ttsClient := tts.NewClient(ttsVoiceUz, ttsVoiceRu, sugar)
+	if !ttsClient.IsAvailable() {
+		sugar.Warn("[tts] edge-tts not installed — TTS endpoint will return 500")
+	}
+
+	api.RegisterRoutes(r, database, botToken, sugar, adminIDs, devMode, aiClient, ttsClient)
 
 	// No-cache middleware for frontend assets
 	r.Use(func(c *gin.Context) {
@@ -104,7 +142,21 @@ func main() {
 
 	// Start bot (long-polling, blocking in goroutine)
 	if botToken != "" {
-		go bot.Start(database, botToken, sugar)
+		var parsedAdminIDs []int64
+		if adminIDs != "" {
+			parts := strings.Split(adminIDs, ",")
+			for _, p := range parts {
+				p = strings.TrimSpace(p)
+				if p == "" {
+					continue
+				}
+				var id int64
+				if _, err := fmt.Sscanf(p, "%d", &id); err == nil {
+					parsedAdminIDs = append(parsedAdminIDs, id)
+				}
+			}
+		}
+		go bot.Start(database, botToken, webappURL, sugar, parsedAdminIDs, aiClient)
 	}
 
 	sugar.Infow("starting server", "port", port)

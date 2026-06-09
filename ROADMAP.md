@@ -155,6 +155,8 @@
 - [x] Ежедневный урок (AI генерирует 5-min под уровень)
 - [ ] Rewarded ads (Monetag/RichAds — CPM $2-16)
 - [x] TTS произношение (edge-tts)
+- [x] Онбординг (welcome screen при первом запуске)
+- [x] Голосовой ввод (Speech-to-Text)
 - [ ] Групповой режим (чат-комната для практики)
 - [x] IELTS/CEFR подготовка (Writing, Speaking, Reading, Band Scores)
 
@@ -184,7 +186,7 @@
 | Этап 1: Ядро (кроме webhook) | 2026-06-06 |
 | Этап 2: Vocabulary + Level Test (кроме графика) | 2026-06-06 |
 | Этап 3: Монетизация (полностью, с premium features) | 2026-06-09 |
-| Этап 6: IELTS/CEFR, TTS, DailyLesson | 2026-06-09 |
+| Этап 6: IELTS/CEFR, TTS, DailyLesson, Onboarding, Voice Input | 2026-06-09 |
 
 ---
 

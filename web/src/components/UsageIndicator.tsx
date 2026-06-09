@@ -19,8 +19,9 @@ export function UsageIndicator({ usage, onUpgrade }: UsageIndicatorProps) {
         padding: '8px 16px',
         fontSize: 13,
       }}>
-        <span style={{ color: 'var(--tg-accent)' }}>⭐</span>
-        <span style={{ color: 'var(--tg-hint)' }}>Unlimited</span>
+        <span style={{ color: 'var(--c-primary)', fontWeight: 600 }}>
+          ⭐ Unlimited
+        </span>
       </div>
     );
   }
@@ -37,7 +38,7 @@ export function UsageIndicator({ usage, onUpgrade }: UsageIndicatorProps) {
         gap: 8,
         padding: '8px 16px',
       }}>
-        <span style={{ fontSize: 13, color: 'var(--tg-destructive)' }}>
+        <span style={{ fontSize: 13, color: 'var(--c-error)', fontWeight: 500 }}>
           {t('chat.limit_exhausted')}
         </span>
         <button
@@ -58,22 +59,24 @@ export function UsageIndicator({ usage, onUpgrade }: UsageIndicatorProps) {
       gap: 8,
       padding: '8px 16px',
       fontSize: 13,
-      color: 'var(--tg-hint)',
+      color: 'var(--c-on-surface-variant)',
     }}>
-      <span>{t('chat.daily_limit', { used: usage.daily_used, total: usage.daily_limit })}</span>
+      <span style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>
+        {t('chat.daily_limit', { used: usage.daily_used, total: usage.daily_limit })}
+      </span>
       <div style={{
         flex: 1,
-        height: 4,
-        borderRadius: 2,
-        background: 'var(--tg-secondary-bg)',
+        height: 6,
+        borderRadius: 'var(--round-full)',
+        background: 'var(--c-surface-container-highest)',
         overflow: 'hidden',
         maxWidth: 80,
       }}>
         <div style={{
           width: `${Math.min(pct, 100)}%`,
           height: '100%',
-          borderRadius: 2,
-          background: 'var(--tg-button)',
+          borderRadius: 'var(--round-full)',
+          background: 'var(--c-primary)',
           transition: 'width 0.3s',
         }} />
       </div>

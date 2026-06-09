@@ -14,6 +14,10 @@ vi.mock('react-i18next', () => ({
       };
       return map[key] || key;
     },
+    i18n: {
+      language: 'ru',
+      changeLanguage: vi.fn(),
+    },
   }),
 }));
 
@@ -21,7 +25,9 @@ const mockWord: VocabWord = {
   id: 1,
   word: 'apple',
   translation: 'яблоко',
+  translation_ru: 'яблоко',
   example: 'I eat an apple every day.',
+  example_ru: 'I eat an apple every day.',
   level: 'a1',
   review_count: 0,
   ease_factor: 2.5,

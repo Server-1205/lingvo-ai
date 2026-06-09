@@ -32,6 +32,16 @@ func GetUserByTelegramID(ctx context.Context, db *sqlx.DB, telegramID int64) (*m
 	return &u, nil
 }
 
+func UpdateUserLang(ctx context.Context, db *sqlx.DB, userID int, lang string) error {
+	if lang != "uz" && lang != "ru" {
+		return nil
+	}
+	_, err := db.ExecContext(ctx,
+		"UPDATE users SET lang = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+		lang, userID)
+	return err
+}
+
 func GetAllUsers(ctx context.Context, db *sqlx.DB) ([]models.User, error) {
 	var users []models.User
 	err := db.SelectContext(ctx, &users, "SELECT * FROM users ORDER BY id ASC")

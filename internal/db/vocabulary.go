@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 
@@ -18,24 +19,44 @@ func GetVocabulary(ctx context.Context, db *sqlx.DB, userID int) ([]models.Vocab
 	return words, nil
 }
 
-func AddVocabulary(ctx context.Context, db *sqlx.DB, userID int, word, translation, example, level string) error {
+func AddVocabulary(ctx context.Context, db *sqlx.DB, userID int, word, translation, example, level, translationRu, exampleRu string) error {
 	if level == "" {
 		level = "a1"
 	}
+	word = strings.ToLower(word)
 	_, err := db.ExecContext(ctx, `
-		INSERT INTO vocabulary (user_id, word, translation, example, level)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO vocabulary (user_id, word, translation, example, level, translation_ru, example_ru)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(user_id, word) DO UPDATE SET
 			translation = excluded.translation,
 			example = excluded.example,
-			level = excluded.level
-	`, userID, word, translation, example, level)
+			level = excluded.level,
+			translation_ru = excluded.translation_ru,
+			example_ru = excluded.example_ru
+	`, userID, word, translation, example, level, translationRu, exampleRu)
 	return err
 }
 
 func DeleteVocabulary(ctx context.Context, db *sqlx.DB, userID, wordID int) error {
 	_, err := db.ExecContext(ctx,
 		"DELETE FROM vocabulary WHERE id = ? AND user_id = ?", wordID, userID)
+	return err
+}
+
+func GetWordsMissingRu(ctx context.Context, db *sqlx.DB) ([]models.VocabWord, error) {
+	var words []models.VocabWord
+	err := db.SelectContext(ctx, &words,
+		"SELECT * FROM vocabulary WHERE translation_ru IS NULL OR translation_ru = ''")
+	if err != nil {
+		return nil, err
+	}
+	return words, nil
+}
+
+func UpdateWordRuTranslation(ctx context.Context, db *sqlx.DB, wordID int, translationRu, exampleRu string) error {
+	_, err := db.ExecContext(ctx,
+		"UPDATE vocabulary SET translation_ru = ?, example_ru = ? WHERE id = ?",
+		translationRu, exampleRu, wordID)
 	return err
 }
 
