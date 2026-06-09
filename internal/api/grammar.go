@@ -30,7 +30,7 @@ func grammarHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLo
 
 		prompt := ai.BuildGrammarCheckPrompt(lvl, lng, req.Text)
 
-		raw, err := aiClient.Generate(c.Request.Context(), prompt)
+		raw, err := aiClient.GenerateLite(c.Request.Context(), prompt)
 		if err != nil {
 			sugar.Errorw("ai grammar error", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ai_service_unavailable"})
@@ -86,7 +86,7 @@ func vocabLookupHandler(aiClient *ai.Client, sugar *zap.SugaredLogger) gin.Handl
 
 		prompt := ai.BuildVocabPrompt(lng, req.Word)
 
-		raw, err := aiClient.Generate(c.Request.Context(), prompt)
+		raw, err := aiClient.GenerateLite(c.Request.Context(), prompt)
 		if err != nil {
 			sugar.Errorw("ai vocab lookup error", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ai_service_unavailable"})

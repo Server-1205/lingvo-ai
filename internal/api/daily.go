@@ -30,7 +30,7 @@ func dailyHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLogg
 		sugar.Infow("[daily] generating lesson", "user_id", uid, "level", lvl, "lang", lng)
 
 		prompt := ai.BuildDailyLessonPrompt(lvl, lng)
-		raw, err := aiClient.Generate(c.Request.Context(), prompt)
+		raw, err := aiClient.GenerateLite(c.Request.Context(), prompt)
 		if err != nil {
 			sugar.Errorw("[daily] AI generate failed", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ai_service_unavailable"})

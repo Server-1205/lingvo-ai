@@ -55,7 +55,7 @@ func helpText(lang string) string {
 	return msgs["uz"]
 }
 
-func handleCommand(bot *tgbotapi.BotAPI, database *sqlx.DB, webappURL string, sugar *zap.SugaredLogger, update tgbotapi.Update, aiClient *ai.Client) {
+func handleCommand(bot *tgbotapi.BotAPI, database *sqlx.DB, webappURL string, sugar *zap.SugaredLogger, update tgbotapi.Update, adminIDs []int64, aiClient *ai.Client) {
 	if update.Message == nil || !update.Message.IsCommand() {
 		return
 	}
@@ -104,6 +104,12 @@ func handleCommand(bot *tgbotapi.BotAPI, database *sqlx.DB, webappURL string, su
 
 	case "stats":
 		handleStats(bot, database, sugar, chatID, telegramID, lang)
+
+	case "toggle_premium":
+		handleTogglePremium(bot, database, sugar, chatID, telegramID, lang, adminIDs, update.Message.CommandArguments())
+
+	case "users":
+		handleUsers(bot, database, sugar, chatID, telegramID, adminIDs)
 
 	default:
 		msg := tgbotapi.NewMessage(chatID, "Unknown command. /help")
@@ -254,4 +260,78 @@ func cleanJSON(raw string) string {
 	raw = strings.TrimPrefix(raw, "```")
 	raw = strings.TrimSuffix(raw, "```")
 	return strings.TrimSpace(raw)
+}
+
+func isAdmin(telegramID int64, adminIDs []int64) bool {
+	for _, id := range adminIDs {
+		if id == telegramID {
+			return true
+		}
+	}
+	return false
+}
+
+func handleTogglePremium(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger, chatID int64, telegramID int64, lang string, adminIDs []int64, args string) {
+	if !isAdmin(telegramID, adminIDs) {
+		sendMessage(bot, chatID, "⛔ Bu buyruq faqat adminlar uchun. / Эта команда только для админов.")
+		return
+	}
+
+	ctx := context.Background()
+	targetTelegramID := telegramID
+
+	args = strings.TrimSpace(args)
+	if args != "" {
+		msg := "❌ Поиск по @username пока не поддерживается. Используйте /toggle_premium без аргумента для себя."
+		sendMessage(bot, chatID, msg)
+		return
+	}
+
+	user, err := db.GetUserByTelegramID(ctx, database, targetTelegramID)
+	if err != nil {
+		sugar.Errorw("toggle_premium: user not found", "telegram_id", targetTelegramID, "error", err)
+		sendMessage(bot, chatID, "❌ Пользователь не найден. Сначала напишите /start в боте.")
+		return
+	}
+
+	nowPremium, err := db.TogglePremium(ctx, database, user.ID)
+	if err != nil {
+		sugar.Errorw("toggle_premium: db error", "user_id", user.ID, "error", err)
+		sendMessage(bot, chatID, "❌ Ошибка базы данных.")
+		return
+	}
+
+	if lang == "ru" {
+		if nowPremium {
+			sendMessage(bot, chatID, "✅ Премиум включён! Теперь у вас неограниченный доступ.")
+		} else {
+			sendMessage(bot, chatID, "✅ Премиум выключен. Теперь у вас 10 сообщений в день.")
+		}
+	} else {
+		if nowPremium {
+			sendMessage(bot, chatID, "✅ Premium yoqildi! Endi sizda cheksiz imkoniyat.")
+		} else {
+			sendMessage(bot, chatID, "✅ Premium o'chirildi. Endi kuniga 10 ta xabar.")
+		}
+	}
+
+	sugar.Infow("toggle_premium", "telegram_id", targetTelegramID, "user_id", user.ID, "now_premium", nowPremium)
+}
+
+func handleUsers(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger, chatID int64, telegramID int64, adminIDs []int64) {
+	if !isAdmin(telegramID, adminIDs) {
+		sendMessage(bot, chatID, "⛔ Bu buyruq faqat adminlar uchun. / Эта команда только для админов.")
+		return
+	}
+
+	users, err := db.GetAllUsers(context.Background(), database)
+	if err != nil {
+		sugar.Errorw("handleUsers: db error", "error", err)
+		sendMessage(bot, chatID, "❌ Ошибка базы данных.")
+		return
+	}
+
+	msg := fmt.Sprintf("👥 Всего пользователей: %d", len(users))
+	sendMessage(bot, chatID, msg)
+	sugar.Infow("handleUsers", "count", len(users))
 }

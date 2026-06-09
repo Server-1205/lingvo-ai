@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 
 	"github.com/lingvo-ai/lingvo/internal/ai"
+	"github.com/lingvo-ai/lingvo/internal/cache"
 	"github.com/lingvo-ai/lingvo/internal/middleware"
 	"github.com/lingvo-ai/lingvo/internal/tts"
 )
@@ -42,6 +44,7 @@ func RegisterRoutes(r *gin.Engine, db *sqlx.DB, botToken string, sugar *zap.Suga
 	authMw := middleware.AuthMiddleware(botToken, db, devMode)
 	adminIDs := parseAdminIDs(adminIDList)
 	rateMw := middleware.RateLimitMiddleware(db, adminIDs, devMode)
+	apiCache := cache.New(30 * time.Second)
 
 	if aiClient != nil {
 		go func() {
@@ -67,12 +70,12 @@ func RegisterRoutes(r *gin.Engine, db *sqlx.DB, botToken string, sugar *zap.Suga
 		protected.POST("/level", levelTestHandler(db, aiClient, sugar))
 		protected.POST("/level/save", levelSaveHandler(db))
 		protected.POST("/daily", rateMw, dailyHandler(db, aiClient, sugar))
-		protected.GET("/progress", progressHandler(db))
-		protected.GET("/progress/history", progressHistoryHandler(db, sugar))
-		protected.GET("/subscription", subscriptionHandler(db))
+		protected.GET("/progress", progressHandler(db, apiCache))
+		protected.GET("/progress/history", progressHistoryHandler(db, sugar, apiCache))
+		protected.GET("/subscription", subscriptionHandler(db, apiCache))
 		protected.POST("/create-invoice", invoiceHandler(botToken, sugar))
 		protected.GET("/errors/history", rateMw, errorsHistoryHandler(db, sugar))
-		protected.GET("/errors/stats", rateMw, errorsStatsHandler(db, sugar))
+		protected.GET("/errors/stats", rateMw, errorsStatsHandler(db, sugar, apiCache))
 		protected.POST("/ielts/writing", rateMw, ieltsWritingHandler(db, aiClient, sugar))
 		protected.GET("/ielts/speaking", rateMw, ieltsSpeakingGenerateHandler(db, aiClient, sugar))
 		protected.POST("/ielts/speaking", rateMw, ieltsSpeakingEvaluateHandler(db, aiClient, sugar))

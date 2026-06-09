@@ -79,7 +79,7 @@ func processUpdate(bot *tgbotapi.BotAPI, database *sqlx.DB, webappURL string, su
 	}
 
 	if update.Message.IsCommand() {
-		handleCommand(bot, database, webappURL, sugar, update, aiClient)
+		handleCommand(bot, database, webappURL, sugar, update, adminIDs, aiClient)
 		return
 	}
 }

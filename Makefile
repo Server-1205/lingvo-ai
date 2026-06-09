@@ -36,29 +36,52 @@ DOCKER_TAG      ?= $(VERSION)
 
 # --- Tools ---
 GOLANGCI_LINT ?= golangci-lint
+GOSEC         ?= gosec
 GOTEST        ?= $(GO) test
 GOTESTFLAGS   ?= -race -count=1
+AIR           ?= air
 
 # ============================================================================
 .DEFAULT_GOAL := help
 
 ##@ Development
 
+.PHONY: all
+all: build build-frontend ## Build everything
+
+.PHONY: install
+install: ## Install dev tools (air, golangci-lint, gosec)
+	@which $(AIR) 2>/dev/null || go install github.com/air-verse/air@latest
+	@which $(GOLANGCI_LINT) 2>/dev/null || go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@which $(GOSEC) 2>/dev/null || go install github.com/securego/gosec/v2/cmd/gosec@latest
+
+.PHONY: setup
+setup: tidy install frontend-install ## Full project setup (deps + tools)
+
 .PHONY: dev
 dev: ## Run backend with hot reload (requires air)
-	air
+	$(AIR)
 
 .PHONY: dev-frontend
 dev-frontend: ## Run frontend dev server
 	cd $(WEB_DIR) && $(NPM) dev
+
+.PHONY: dev-all
+dev-all: ## Run backend + frontend concurrently
+	@echo "Starting backend (air) and frontend (vite) concurrently..."
+	@trap 'kill 0' EXIT; ($(AIR)) & (cd $(WEB_DIR) && $(NPM) dev) & wait
 
 .PHONY: build
 build: ## Build backend binary
 	$(GO) build $(GOFLAGS) -ldflags '$(LDFLAGS)' -o $(BINARY) $(MAIN_PKG)
 
 .PHONY: build-frontend
-build-frontend: ## Build frontend assets
-	cd $(WEB_DIR) && $(NPM) install && $(NPM) run build
+build-frontend: frontend-install ## Build frontend assets
+	cd $(WEB_DIR) && $(NPM) run build
+
+.PHONY: frontend-install
+frontend-install: ## Install frontend dependencies
+	cd $(WEB_DIR) && $(NPM) install
 
 .PHONY: run
 run: build ## Build and run backend
@@ -75,8 +98,8 @@ test: ## Run Go tests
 	$(GOTEST) $(GOTESTFLAGS) ./...
 
 .PHONY: test-frontend
-test-frontend: ## Run frontend tests
-	cd $(WEB_DIR) && $(NPM) test run
+test-frontend: ## Run frontend tests (vitest)
+	cd $(WEB_DIR) && npx vitest run
 
 .PHONY: test-cover
 test-cover: ## Run tests with coverage report
@@ -119,6 +142,18 @@ tidy: ## Tidy and verify go.mod
 typecheck: ## Run frontend type checking
 	cd $(WEB_DIR) && npx tsc --noEmit
 
+.PHONY: audit
+audit: ## Run security audit (Go + frontend)
+	$(GO) mod verify
+	cd $(WEB_DIR) && $(NPM) audit --audit-level=high || true
+
+.PHONY: security
+security: ## Run gosec on Go code
+	$(GOSEC) -quiet -fmt=text ./...
+
+.PHONY: check
+check: lint vet test test-frontend build build-frontend ## Full pre-commit gate
+
 ##@ Docker
 
 .PHONY: docker-build
@@ -142,7 +177,14 @@ docker-push: ## Push Docker image
 ##@ CI
 
 .PHONY: ci
-ci: lint vet test build build-frontend ## Run full CI pipeline
+ci: check ## Run full CI pipeline (alias for check)
+
+##@ Database
+
+.PHONY: reset-db
+reset-db: ## Reset SQLite database (remove data file)
+	rm -f data/*.db data/*.db-shm data/*.db-wal
+	@echo "Database reset. Will be recreated on next server start."
 
 ##@ Cleanup
 

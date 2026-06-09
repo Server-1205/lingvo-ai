@@ -29,9 +29,9 @@ func BuildChatPrompt(level, lang, text string) string {
 
 Rules:
 1. Only correct ACTUAL mistakes. If the sentence is correct, return "corrections": [].
-2. Do NOT invent grammar rules that don't exist in standard English.
-3. If you are unsure about a correction, do NOT include it. False positives frustrate the user.
-4. Always return JSON only (no markdown, no code fences):
+2. Never invent grammar rules that don't exist in standard English.
+3. If you are unsure about a correction, skip it entirely. False positives are worse than missed corrections.
+4. Return ONLY valid JSON. No markdown, no code fences, no text outside the JSON object:
 {
   "reply": "your reply in %s",
   "corrections": [
@@ -61,8 +61,9 @@ func BuildGrammarCheckPrompt(level, lang, text string) string {
 
 Rules:
 1. Only flag REAL errors. Do not correct informal but acceptable English.
-2. If the text has no errors, return "corrections": [].
-3. Always return JSON only (no markdown, no code fences):
+2. Never invent grammar rules. If unsure, skip the correction entirely.
+3. If the text has no errors, return "corrections": [].
+4. Return ONLY valid JSON. No markdown, no code fences, no text outside the JSON object:
 
 {
   "reply": "brief summary of what was checked",
@@ -93,8 +94,8 @@ You are in PREMIUM mode — provide deeper analysis.
 
 Rules:
 1. Only correct ACTUAL mistakes. Do NOT invent rules that don't exist.
-2. If unsure about a correction, skip it. False positives are worse than missed corrections.
-3. Always return JSON only (no markdown, no code fences):
+2. If unsure about a correction, skip it entirely. False positives are worse than missed corrections.
+3. Return ONLY valid JSON. No markdown, no code fences, no text outside the JSON object:
 {
   "reply": "your reply in %s",
   "corrections": [
@@ -155,7 +156,9 @@ func BuildQuizPrompt(topic string, count int, lang string) string {
 
 %s
 
-Return JSON:
+Rules:
+1. All questions must be factually correct based on standard English. Do not invent fake grammar rules.
+2. Return ONLY valid JSON. No markdown, no code fences:
 {
   "questions": [
     {
@@ -183,7 +186,8 @@ Rules:
 2. Explain the rule simply with 2-3 examples.
 3. Provide 3-4 exercises with at least 2 different exercise types (mix fill-in-blank, multiple choice, matching).
 4. Include 2 new vocabulary words related to the topic with translations.
-5. Always return JSON only (no markdown, no code fences):
+5. Make sure the grammar rule you teach is real and exists in standard English. Do not invent rules.
+6. Return ONLY valid JSON. No markdown, no code fences:
 
 {
   "topic": "Grammar topic name",
@@ -218,7 +222,9 @@ func BuildLevelTestPrompt(lang string) string {
 
 %s
 
-Return JSON:
+Rules:
+1. All questions must be factually correct based on standard English grammar. Do not invent rules.
+2. Return ONLY valid JSON. No markdown, no code fences:
 {
   "questions": [
     {
@@ -257,8 +263,8 @@ You are in PREMIUM mode — provide deeper analysis.
 
 Rules:
 1. Only correct ACTUAL mistakes. Do NOT invent rules that don't exist.
-2. If unsure about a correction, skip it. False positives are worse than missed corrections.
-3. Always return JSON only (no markdown, no code fences):
+2. If unsure about a correction, skip it entirely. False positives are worse than missed corrections.
+3. Return ONLY valid JSON. No markdown, no code fences, no text outside the JSON object:
 {
   "reply": "your reply in %s",
   "corrections": [
@@ -299,6 +305,11 @@ func BuildIeltsWritingPrompt(taskType, lang, userText, taskDescription string) s
 Task: %s
 
 User's response: %s
+
+Rules:
+1. Score honestly based on official IELTS band descriptors. Do not inflate scores.
+2. Be specific in feedback — point to exact phrases that could be improved.
+3. Return ONLY valid JSON. No markdown, no code fences:
 
 Return JSON only:
 {
@@ -354,6 +365,11 @@ Question: %s
 
 Candidate's response: %s
 
+Rules:
+1. Score honestly based on official IELTS speaking criteria.
+2. Be specific — refer to exact phrases from the response.
+3. Return ONLY valid JSON. No markdown, no code fences:
+
 Return JSON only:
 {
   "band_score": 6.0,
@@ -376,6 +392,11 @@ Requirements:
 - Mix of question types: multiple_choice, true_false, gap_fill, matching
 - The passage should be academic/general interest
 - Difficulty: IELTS Academic level
+- All questions must have clear, unambiguous correct answers
+
+Rules:
+1. Return ONLY valid JSON. No markdown, no code fences.
+2. Do not include any text, explanations, or numbering outside the JSON object.
 
 Return JSON only:
 {
@@ -403,6 +424,11 @@ Passage: %s
 Questions: %s
 
 User's answers (indices): %s
+
+Rules:
+1. Score based strictly on the passage content. Do not use outside knowledge.
+2. Each answer must be verifiable from the passage text.
+3. Return ONLY valid JSON. No markdown, no code fences:
 
 Return JSON only:
 {

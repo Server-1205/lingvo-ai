@@ -7,7 +7,7 @@ import (
 
 func TestBuildChatPrompt_IncludesAntiHallucination(t *testing.T) {
 	prompt := BuildChatPrompt("a1", "uz", "hello")
-	if !strings.Contains(prompt, "Do NOT invent grammar rules") {
+	if !strings.Contains(prompt, "Never invent grammar rules") && !strings.Contains(prompt, "Do NOT invent grammar rules") {
 		t.Error("Chat prompt missing anti-hallucination guard")
 	}
 	if !strings.Contains(prompt, "only correct ACTUAL mistakes") && !strings.Contains(prompt, "Only correct ACTUAL mistakes") {
@@ -17,7 +17,7 @@ func TestBuildChatPrompt_IncludesAntiHallucination(t *testing.T) {
 
 func TestBuildChatPrompt_ReturnsJSONOnly(t *testing.T) {
 	prompt := BuildChatPrompt("b1", "ru", "test")
-	if !strings.Contains(prompt, "no markdown") {
+	if !strings.Contains(prompt, "No markdown") && !strings.Contains(prompt, "no markdown") {
 		t.Error("Chat prompt missing JSON-only instruction")
 	}
 }

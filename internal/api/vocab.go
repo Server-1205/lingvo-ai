@@ -124,7 +124,7 @@ func vocabAddHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredL
 		}
 
 		prompt := ai.BuildVocabPrompt(lng, req.Word)
-		raw, err := aiClient.Generate(c.Request.Context(), prompt)
+		raw, err := aiClient.GenerateLite(c.Request.Context(), prompt)
 		if err != nil {
 			sugar.Errorw("ai vocab lookup error", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ai_service_unavailable"})
@@ -333,7 +333,7 @@ func translateMissingVocab(ctx context.Context, database *sqlx.DB, aiClient *ai.
 	sugar.Infow("[vocab] translating old words", "count", len(words))
 	for _, w := range words {
 		prompt := ai.BuildVocabPrompt("ru", w.Word)
-		raw, err := aiClient.Generate(ctx, prompt)
+		raw, err := aiClient.GenerateLite(ctx, prompt)
 		if err != nil {
 			sugar.Warnw("[vocab] translate failed", "word", w.Word, "error", err)
 			continue

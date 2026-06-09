@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 
@@ -30,4 +31,20 @@ func SaveSubscription(ctx context.Context, db *sqlx.DB, userID int, plan string,
 			started_at = CURRENT_TIMESTAMP
 	`, userID, plan, starsAmount, expiresAt)
 	return err
+}
+
+func TogglePremium(ctx context.Context, db *sqlx.DB, userID int) (bool, error) {
+	sub, err := GetActiveSubscription(ctx, db, userID)
+	if err != nil {
+		return false, err
+	}
+
+	if sub != nil {
+		_, err = db.ExecContext(ctx, "DELETE FROM subscriptions WHERE user_id = ?", userID)
+		return false, err
+	}
+
+	farFuture := time.Now().AddDate(10, 0, 0).Format(time.RFC3339)
+	err = SaveSubscription(ctx, db, userID, "monthly", 0, farFuture)
+	return true, err
 }

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 
+	"github.com/lingvo-ai/lingvo/internal/cache"
 	"github.com/lingvo-ai/lingvo/internal/db"
 	"github.com/lingvo-ai/lingvo/internal/models"
 )
@@ -55,7 +57,7 @@ func errorsHistoryHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.Handl
 	}
 }
 
-func errorsStatsHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.HandlerFunc {
+func errorsStatsHandler(database *sqlx.DB, sugar *zap.SugaredLogger, cch *cache.Cache) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Cache-Control", "no-store")
 
@@ -77,6 +79,13 @@ func errorsStatsHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.Handler
 			days = 365
 		}
 
+		cacheKey := "errors_stats:" + strconv.Itoa(uid) + ":" + strconv.Itoa(days)
+		if data, ok := cch.Get(cacheKey); ok {
+			c.Data(http.StatusOK, "application/json; charset=utf-8", data.([]byte))
+			c.Abort()
+			return
+		}
+
 		stats, err := db.GetErrorStats(c.Request.Context(), database, uid, days)
 		if err != nil {
 			sugar.Errorw("error stats query failed", "user_id", uid, "error", err)
@@ -86,6 +95,9 @@ func errorsStatsHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.Handler
 
 		sugar.Debugw("error stats requested", "user_id", uid, "total_errors", stats.TotalErrors)
 
+		if raw, err := json.Marshal(stats); err == nil {
+			cch.SetDefault(cacheKey, raw)
+		}
 		c.JSON(http.StatusOK, stats)
 	}
 }
