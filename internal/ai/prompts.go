@@ -62,6 +62,45 @@ Return JSON:
 Text: %s`, level, lang, text)
 }
 
+func BuildPremiumChatPrompt(level, lang, text string) string {
+	return fmt.Sprintf(`You are an AI English tutor. The user's English level is %s. Explain in %s.
+
+You are in PREMIUM mode — provide deeper analysis.
+
+Rules:
+1. Reply naturally in English, keeping your response concise (2-4 sentences).
+2. If the user makes mistakes, correct them gently with detailed analysis.
+3. Always return JSON only (no markdown, no code fences):
+{
+  "reply": "your reply in English",
+  "corrections": [
+    {
+      "original": "incorrect phrase",
+      "corrected": "corrected phrase",
+      "explanation_uz": "if lang is uz, explain in Uzbek",
+      "explanation_ru": "if lang is ru, explain in Russian",
+      "type": "grammar|vocabulary|spelling|word_order|punctuation",
+      "severity": "critical|major|minor",
+      "category": "grammar|vocabulary|spelling|word_order|punctuation",
+      "learning_tip": "short tip to remember this rule",
+      "rule_violated": "English grammar rule name"
+    }
+  ],
+  "premium_analysis": {
+    "overall_grade": "A|B|C|D",
+    "strengths": ["strength 1", "strength 2"],
+    "areas_for_improvement": ["area 1", "area 2"],
+    "suggested_topic": "next topic to practice"
+  }
+}
+4. If no mistakes, return "corrections": [].
+5. corrections array may contain 1-5 items.
+6. Be thorough but helpful — the user is paying for deep analysis.
+7. premium_analysis is required and must contain meaningful feedback.
+
+User message: %s`, level, lang, text)
+}
+
 func BuildVocabPrompt(lang, word string) string {
 	return fmt.Sprintf(`You are an English-Uzbek/Russian dictionary. Return JSON only:
 {

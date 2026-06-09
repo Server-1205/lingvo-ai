@@ -23,18 +23,27 @@ type Correction struct {
 	LearningTip   string `json:"learning_tip,omitempty"`
 	RuleViolated  string `json:"rule_violated,omitempty"`
 }
+	Corrections     []Correction     `json:"corrections"`
+	Usage           Usage            `json:"usage"`
+=======
+	Severity      string `json:"severity,omitempty"`       // "critical" | "major" | "minor"
+	Category      string `json:"category,omitempty"`       // "grammar" | "vocabulary" | "spelling" | "word_order" | "punctuation"
+	LearningTip   string `json:"learning_tip,omitempty"`   // e.g. "Remember: 'yesterday' always triggers Past Simple"
+	RuleViolated  string `json:"rule_violated,omitempty"`  // e.g. "Subject-Verb Agreement (Present Simple)"
+}
 
 type PremiumAnalysis struct {
-	OverallGrade        string   `json:"overall_grade"`
+	OverallGrade        string   `json:"overall_grade"`         // "A" | "B" | "C" | "D"
 	Strengths           []string `json:"strengths"`
 	AreasForImprovement []string `json:"areas_for_improvement"`
-	SuggestedTopic      string   `json:"suggested_topic"`
+	SuggestedTopic      string   `json:"suggested_topic"`       // "Next: practice Past Continuous"
 }
 
 type ChatResponse struct {
-	Reply           string           `json:"reply"`
-	Corrections     []Correction     `json:"corrections"`
-	Usage           Usage            `json:"usage"`
+	Reply           string          `json:"reply"`
+	Corrections     []Correction    `json:"corrections"`
+	Usage           Usage           `json:"usage"`
+>>>>>>> feature/premium-features
 	PremiumAnalysis *PremiumAnalysis `json:"premium_analysis,omitempty"`
 }
 

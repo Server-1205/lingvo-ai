@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getVocab, addVocab, deleteVocab, getDueWords, submitReview } from '../api/client';
+import { getVocab, addVocab, deleteVocab, getDueWords, submitReview, getSubscription } from '../api/client';
 import type { VocabWord } from '../api/client';
 import { ReviewCard } from './ReviewCard';
 
@@ -16,6 +16,13 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
   const [reviewIndex, setReviewIndex] = useState(0);
   const [lookupWord, setLookupWord] = useState('');
   const [addedWord, setAddedWord] = useState<string | null>(null);
+
+  const { data: sub } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: getSubscription,
+    staleTime: 30000,
+  });
+  const isPremium = sub?.active ?? false;
 
   const { data: vocabResp, isLoading } = useQuery({
     queryKey: ['vocab'],
@@ -61,6 +68,33 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
         padding: '12px 16px',
       }}>
         <span className="section-title" style={{ padding: 0 }}>{t('vocab.title')}</span>
+        {isPremium && (
+          <button
+            className="btn"
+            style={{ fontSize: 12, padding: '4px 10px' }}
+            onClick={() => {
+              console.debug('[vocab] export clicked');
+              const a = document.createElement('a');
+              const initDataRaw = (window as any).Telegram?.WebApp?.initData;
+              fetch('/api/vocab/export', {
+                headers: initDataRaw ? { 'X-Telegram-Init-Data': initDataRaw } : {},
+              })
+                .then(res => {
+                  if (!res.ok) throw new Error('export failed');
+                  return res.blob();
+                })
+                .then(blob => {
+                  a.href = URL.createObjectURL(blob);
+                  a.download = 'vocabulary.csv';
+                  a.click();
+                  URL.revokeObjectURL(a.href);
+                })
+                .catch(err => console.debug('[vocab] export error', err));
+            }}
+          >
+            {t('premium.export_vocab')}
+          </button>
+        )}
       </div>
 
       <div style={{ display: 'flex', margin: '0 16px 12px', gap: 8 }}>

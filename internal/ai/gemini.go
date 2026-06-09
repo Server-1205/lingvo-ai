@@ -13,11 +13,13 @@ import (
 )
 
 type Client struct {
-	genClient *genai.Client
-	model     *genai.GenerativeModel
-	liteModel *genai.GenerativeModel
-	fallback  *openAIClient
-	sugar     *zap.SugaredLogger
+	genClient     *genai.Client
+	model         *genai.GenerativeModel
+	liteModel     *genai.GenerativeModel
+	fallback      *openAIClient
+	sugar         *zap.SugaredLogger
+	queue         *Queue
+	queueEnabled  bool
 }
 
 func NewClient(ctx context.Context, apiKey string, openAIKey, openAIBaseURL, openAIModel string, sugar *zap.SugaredLogger) (*Client, error) {
@@ -50,7 +52,26 @@ func NewClient(ctx context.Context, apiKey string, openAIKey, openAIBaseURL, ope
 }
 
 func (c *Client) Close() error {
+	if c.queue != nil {
+		c.queue.StopWorker()
+	}
 	return c.genClient.Close()
+}
+
+func (c *Client) EnableQueue(ctx context.Context, sugar *zap.SugaredLogger) {
+	c.queue = NewQueue()
+	c.queue.StartWorker(ctx, c, sugar)
+	c.queueEnabled = true
+}
+
+func (c *Client) EnqueueAI(req *AIRequest) {
+	if c.queue != nil {
+		c.queue.Enqueue(req)
+	}
+}
+
+func (c *Client) IsQueueEnabled() bool {
+	return c.queueEnabled
 }
 
 func (c *Client) GenerateLite(ctx context.Context, prompt string) (string, error) {

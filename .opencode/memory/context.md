@@ -10,18 +10,19 @@
 ## Состояние проекта
 
 - **Стадия**: Core — Backend API + middleware работают
-- **Backend**: Go-сервер компилируется, 14 эндпоинтов (chat, chat/stream, grammar, vocab CRUD, vocab lookup, vocab review GET/POST, quiz, level test, level save, progress, subscription, invoice)
+- **Backend**: Go-сервер компилируется, 20 эндпоинтов (+6 IELTS: writing, speaking generate/evaluate, reading generate/evaluate, scores)
 - **Middleware**: Auth (HMAC-SHA256 initData), Ratelimit (10/day free, unlimited premium)
-- **Frontend**: UI написан (Chat, NavBar, Subscription, Vocabulary, Progress, LevelTest, ReviewCard) — React 19, Vite 8, TS 6
+- **Frontend**: UI написан (Chat, NavBar, Subscription, Vocabulary, Progress, LevelTest, ReviewCard, IeltsDashboard, IeltsWriting, IeltsSpeaking, IeltsReading) — React 19, Vite 8, TS 6
 - **Бот**: Long-polling работает (/start, /help, /daily, /stats, successful_payment)
 - **AI**: Gemini-клиент + SM-2 алгоритм (sm2.go, prompts.go, response.go), Streaming через SSE (chat_stream.go)
-- **БД**: Схема готова (5 таблиц + SM-2 колонки), миграция работает, CRUD готов (users, messages, subscriptions, vocabulary, progress)
-- **i18n**: Frontend uz.json + ru.json (52 ключа), Backend uz.json + ru.json (7 ключей)
+- **БД**: Схема готова (6 таблиц: users, messages, subscriptions, vocabulary, daily_progress, ielts_scores + SM-2 колонки), миграция работает, CRUD готов (users, messages, subscriptions, vocabulary, progress, ielts)
+- **i18n**: Frontend uz.json + ru.json (95+ ключей, включая ielts.*), Backend uz.json + ru.json (7 ключей)
 - **SM-2 Spaced Repetition**: ✅ Полностью реализован (алгоритм + API + UI + тесты)
+- **IELTS Full Prep Bundle**: ✅ Writing (Task 1/2), Speaking (Part 1-3), Reading, Band Score tracking, premium-gated (все 6 эндпоинтов + 4 UI компонента + Go/Vitest тесты)
 
 ## Текущий фокус
 
-- (none — SM-2 завершён, все компоненты подключены к API)
+- (none — IELTS завершён)
 
 ## Архитектурные решения
 

@@ -65,6 +65,10 @@ func main() {
 		port = "8080"
 	}
 
+	aiQueueEnabled := os.Getenv("AI_QUEUE_ENABLED") == "true"
+	devMode := os.Getenv("DEV_MODE") == "true"
+	adminIDs := os.Getenv("ADMIN_IDS")
+
 	// Init database
 	database, err := sqlx.Connect("sqlite", dbPath)
 	if err != nil {
@@ -78,7 +82,7 @@ func main() {
 	r := gin.Default()
 
 	// API routes (includes /api/health)
-	api.RegisterRoutes(r, database, geminiKey, openAIKey, openAIBaseURL, openAIModel, botToken, sugar)
+	api.RegisterRoutes(r, database, geminiKey, openAIKey, openAIBaseURL, openAIModel, botToken, sugar, aiQueueEnabled, adminIDs, devMode)
 
 	// No-cache middleware for frontend assets
 	r.Use(func(c *gin.Context) {

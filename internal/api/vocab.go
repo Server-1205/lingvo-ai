@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -151,6 +152,51 @@ func vocabDeleteHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.Handler
 		}
 
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	}
+}
+
+func vocabExportHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Cache-Control", "no-store")
+		c.Header("Content-Type", "text/csv")
+		c.Header("Content-Disposition", `attachment; filename="vocabulary.csv"`)
+
+		userID, _ := c.Get("user_id")
+		uid, _ := userID.(int)
+
+		var words []models.VocabWord
+		if err := database.SelectContext(c.Request.Context(), &words,
+			"SELECT * FROM vocabulary WHERE user_id = ? ORDER BY created_at DESC", uid); err != nil {
+			sugar.Errorw("vocab export db error", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal_error"})
+			return
+		}
+
+		writer := csv.NewWriter(c.Writer)
+		writer.Write([]string{"word", "translation", "example", "level", "review_count", "next_review", "created_at"})
+
+		for _, w := range words {
+			nextReview := ""
+			if w.NextReview != nil {
+				nextReview = w.NextReview.Format("2006-01-02")
+			}
+			writer.Write([]string{
+				w.Word,
+				w.Translation,
+				w.Example,
+				w.Level,
+				strconv.Itoa(w.ReviewCount),
+				nextReview,
+				w.CreatedAt.Format("2006-01-02"),
+			})
+		}
+
+		writer.Flush()
+		if err := writer.Error(); err != nil {
+			sugar.Errorw("vocab export csv write error", "error", err)
+		}
+
+		sugar.Infow("vocab export", "user_id", uid, "count", len(words))
 	}
 }
 

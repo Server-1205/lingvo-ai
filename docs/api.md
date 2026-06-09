@@ -35,7 +35,7 @@ X-Telegram-Init-Data: query_id=...&auth_date=...&hash=...
 {"text": "I go to school yesterday"}
 ```
 
-**Response:**
+**Response (free):**
 ```json
 {
   "reply": "Good! Tell me more about your day.",
@@ -52,6 +52,37 @@ X-Telegram-Init-Data: query_id=...&auth_date=...&hash=...
     "daily_used": 4,
     "daily_limit": 10,
     "is_premium": false
+  }
+}
+```
+
+**Response (premium — доп. поля в corrections + premium_analysis):**
+```json
+{
+  "reply": "Good attempt! Let me help you improve.",
+  "corrections": [
+    {
+      "original": "I has",
+      "corrected": "I have",
+      "explanation_uz": "\"I\" дан кейин \"has\" эмас, \"have\" ишлатилади.",
+      "explanation_ru": "После \"I\" используется \"have\", а не \"has\".",
+      "type": "grammar",
+      "severity": "major",
+      "category": "grammar",
+      "learning_tip": "\"I\" всегда с \"have\", \"he/she/it\" — с \"has\"",
+      "rule_violated": "Subject-Verb Agreement (Present Simple)"
+    }
+  ],
+  "usage": {
+    "daily_used": 4,
+    "daily_limit": 10,
+    "is_premium": true
+  },
+  "premium_analysis": {
+    "overall_grade": "B",
+    "strengths": ["good vocabulary", "clear sentence structure"],
+    "areas_for_improvement": ["subject-verb agreement"],
+    "suggested_topic": "Present Simple vs Present Continuous"
   }
 }
 ```
@@ -122,6 +153,19 @@ data: {"type":"done"}
 **Response:**
 ```json
 {"words": [...], "total": 42, "due_count": 12}
+```
+
+---
+
+### GET /api/vocab/export
+
+Экспорт словаря в CSV. Только для premium-пользователей.
+
+**Response:** `Content-Type: text/csv` с заголовком `Content-Disposition: attachment; filename="vocabulary.csv"`
+
+```csv
+word,translation,example,level,review_count,next_review,created_at
+hello,salom,Hello world!,a1,3,,2026-06-01
 ```
 
 ---
