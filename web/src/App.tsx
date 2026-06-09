@@ -9,6 +9,7 @@ import { ProgressView } from './components/Progress';
 import { SubscriptionPlans } from './components/Subscription';
 import { ErrorDashboard } from './components/ErrorDashboard';
 import { LevelTest } from './components/LevelTest';
+import { IeltsDashboard } from './components/IeltsDashboard';
 import { useTelegram } from './hooks/useTelegram';
 import { getSubscription } from './api/client';
 import type { SubscriptionResponse } from './api/client';
@@ -95,6 +96,7 @@ function App() {
             {activeTab === 'progress' && <ProgressView onStartLevelTest={() => setShowLevelTest(true)} />}
             {activeTab === 'subscription' && <SubscriptionPlans />}
             {activeTab === 'errors' && <ErrorDashboard />}
+            {activeTab === 'ielts' && <IeltsDashboard />}
           </>
         )}
       </main>

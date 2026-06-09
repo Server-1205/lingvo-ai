@@ -203,3 +203,137 @@ Rules:
 
 User message: %s`, level, instr, historySection, langFullName(lang), text)
 }
+
+func BuildIeltsWritingPrompt(taskType, lang, userText, taskDescription string) string {
+	format := "report describing a chart/graph/data"
+	if taskType == "task2" {
+		format = "essay discussing a topic"
+	}
+	return fmt.Sprintf(`You are an IELTS Writing examiner. Evaluate this %s according to official IELTS criteria.
+
+Task: %s
+
+User's response: %s
+
+Return JSON only:
+{
+  "band_score": 6.5,
+  "criteria": {
+    "task_achievement": 6.0,
+    "coherence_cohesion": 6.5,
+    "lexical_resource": 7.0,
+    "grammatical_range": 6.0
+  },
+  "feedback": "detailed feedback in %s",
+  "corrections": [
+    {
+      "original": "wrong phrase",
+      "corrected": "fixed phrase",
+      "explanation_uz": "if lang=uz, explanation in Uzbek",
+      "explanation_ru": "if lang=ru, explanation in Russian",
+      "type": "grammar|vocabulary|spelling"
+    }
+  ],
+  "improvement_tips": ["tip 1", "tip 2", "tip 3"]
+}`, format, taskDescription, userText, langFullName(lang))
+}
+
+func BuildIeltsSpeakingPrompt(part int, lang string) string {
+	var partDesc string
+	switch part {
+	case 1:
+		partDesc = "Part 1 — Introduction and general questions about the candidate's life, work, studies, hobbies. Generate 3-4 simple questions."
+	case 2:
+		partDesc = `Part 2 — Cue Card. Generate ONE topic card in this format:
+"The candidate should speak for 1-2 minutes on the following topic. Describe/Lets talk about [topic]. Include the following points: [3 bullet points]".`
+	case 3:
+		partDesc = "Part 3 — Discussion. Generate 2-3 abstract/discussion questions related to the Part 2 topic. These should be more complex, requiring opinion, comparison, prediction."
+	}
+
+	return fmt.Sprintf(`You are an IELTS Speaking examiner. Generate questions for %s.
+
+Return JSON only:
+{
+  "part": %d,
+  "questions": ["question 1", "question 2", "question 3"],
+  "cue_card": "full cue card text for Part 2 (optional)"
+}
+
+Explain exam instructions in %s.`, partDesc, part, langFullName(lang))
+}
+
+func BuildIeltsSpeakingEvaluatePrompt(part int, lang, question, userResponse string) string {
+	return fmt.Sprintf(`You are an IELTS Speaking examiner. Evaluate this candidate's response for Part %d.
+
+Question: %s
+
+Candidate's response: %s
+
+Return JSON only:
+{
+  "band_score": 6.0,
+  "criteria": {
+    "fluency_coherence": 6.0,
+    "lexical_resource": 6.5,
+    "grammatical_range": 6.0,
+    "pronunciation": 5.5
+  },
+  "feedback": "detailed feedback in %s",
+  "improvement_tips": ["tip 1", "tip 2", "tip 3"]
+}`, part, question, userResponse, langFullName(lang))
+}
+
+func BuildIeltsReadingPrompt(lang string) string {
+	return fmt.Sprintf(`You are an IELTS Reading examiner. Generate a reading passage with 10 questions.
+
+Requirements:
+- Passage length: 400-600 words
+- Mix of question types: multiple_choice, true_false, gap_fill, matching
+- The passage should be academic/general interest
+- Difficulty: IELTS Academic level
+
+Return JSON only:
+{
+  "title": "passage title",
+  "passage": "full reading text here...",
+  "word_count": 450,
+  "questions": [
+    {
+      "type": "multiple_choice|true_false|gap_fill|matching",
+      "question": "question text",
+      "options": ["A", "B", "C", "D", "True", "False", "Not Given"],
+      "correct": 0
+    }
+  ]
+}
+
+Explain instructions in %s.`, langFullName(lang))
+}
+
+func BuildIeltsReadingEvaluatePrompt(lang, passage string, questionsJSON string, userAnswersJSON string) string {
+	return fmt.Sprintf(`You are an IELTS Reading examiner. Check these answers against the passage.
+
+Passage: %s
+
+Questions: %s
+
+User's answers (indices): %s
+
+Return JSON only:
+{
+  "correct_answers": 7,
+  "total_questions": 10,
+  "band_score": 6.0,
+  "results": [
+    {
+      "question_index": 0,
+      "user_answer": 0,
+      "correct_answer": 1,
+      "is_correct": false,
+      "explanation_uz": "if lang=uz, explanation in Uzbek",
+      "explanation_ru": "if lang=ru, explanation in Russian"
+    }
+  ],
+  "feedback": "overall feedback in %s"
+}`, passage, questionsJSON, userAnswersJSON, langFullName(lang))
+}

@@ -234,3 +234,113 @@ type ErrorHistoryResponse struct {
 type ErrorStatsRequest struct {
 	Days int `form:"days"`
 }
+
+type IeltsScoreEntry struct {
+	ID           int       `db:"id" json:"id"`
+	UserID       int       `db:"user_id" json:"user_id"`
+	Module       string    `db:"module" json:"module"`
+	BandScore    float64   `db:"band_score" json:"band_score"`
+	Details      string    `db:"details" json:"details"`
+	Prompt       string    `db:"prompt" json:"prompt"`
+	UserResponse string    `db:"user_response" json:"user_response"`
+	Feedback     string    `db:"feedback" json:"feedback"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+}
+
+type IeltsScoreStats struct {
+	WritingTask1Avg float64 `json:"writing_task1_avg"`
+	WritingTask2Avg float64 `json:"writing_task2_avg"`
+	SpeakingAvg     float64 `json:"speaking_avg"`
+	ReadingAvg      float64 `json:"reading_avg"`
+	TotalPractices  int     `json:"total_practices"`
+}
+
+type IeltsScoresResponse struct {
+	Entries []IeltsScoreEntry `json:"entries"`
+	Total   int               `json:"total"`
+	Stats   *IeltsScoreStats  `json:"stats,omitempty"`
+}
+
+type IeltsWritingRequest struct {
+	Type            string `json:"type" binding:"required"`
+	UserText        string `json:"user_text" binding:"required"`
+	TaskDescription string `json:"task_description,omitempty"`
+}
+
+type IeltsWritingCriteria struct {
+	TaskAchievement  float64 `json:"task_achievement"`
+	CoherenceCohesion float64 `json:"coherence_cohesion"`
+	LexicalResource  float64 `json:"lexical_resource"`
+	GrammaticalRange float64 `json:"grammatical_range"`
+}
+
+type IeltsWritingResponse struct {
+	BandScore      float64              `json:"band_score"`
+	Criteria       IeltsWritingCriteria `json:"criteria"`
+	Feedback       string               `json:"feedback"`
+	Corrections    []Correction         `json:"corrections"`
+	ImprovementTips []string            `json:"improvement_tips"`
+}
+
+type IeltsSpeakingRequest struct {
+	Part         int    `json:"part" binding:"required"`
+	Question     string `json:"question,omitempty"`
+	UserResponse string `json:"user_response,omitempty"`
+}
+
+type IeltsSpeakingQuestionsResponse struct {
+	Part      int      `json:"part"`
+	Questions []string `json:"questions"`
+	CueCard   string   `json:"cue_card,omitempty"`
+}
+
+type IeltsSpeakingCriteria struct {
+	FluencyCoherence  float64 `json:"fluency_coherence"`
+	LexicalResource   float64 `json:"lexical_resource"`
+	GrammaticalRange  float64 `json:"grammatical_range"`
+	Pronunciation     float64 `json:"pronunciation"`
+}
+
+type IeltsSpeakingResponse struct {
+	BandScore      float64               `json:"band_score"`
+	Criteria       IeltsSpeakingCriteria `json:"criteria"`
+	Feedback       string                `json:"feedback"`
+	ImprovementTips []string             `json:"improvement_tips"`
+}
+
+type IeltsReadingPassage struct {
+	Title     string          `json:"title"`
+	Passage   string          `json:"passage"`
+	WordCount int             `json:"word_count"`
+	Questions []interface{}   `json:"questions"`
+}
+
+type IeltsReadingQuestion struct {
+	Type     string   `json:"type"`
+	Question string   `json:"question"`
+	Options  []string `json:"options"`
+	Correct  int      `json:"correct"`
+}
+
+type IeltsReadingSubmitRequest struct {
+	Passage     string                `json:"passage" binding:"required"`
+	Questions   []IeltsReadingQuestion `json:"questions" binding:"required"`
+	UserAnswers []int                 `json:"user_answers" binding:"required"`
+}
+
+type IeltsReadingResult struct {
+	CorrectAnswers  int                     `json:"correct_answers"`
+	TotalQuestions  int                     `json:"total_questions"`
+	BandScore       float64                 `json:"band_score"`
+	Results         []IeltsQuestionResult   `json:"results"`
+	Feedback        string                  `json:"feedback"`
+}
+
+type IeltsQuestionResult struct {
+	QuestionIndex   int    `json:"question_index"`
+	UserAnswer      int    `json:"user_answer"`
+	CorrectAnswer   int    `json:"correct_answer"`
+	IsCorrect       bool   `json:"is_correct"`
+	ExplanationUz   string `json:"explanation_uz"`
+	ExplanationRu   string `json:"explanation_ru"`
+}

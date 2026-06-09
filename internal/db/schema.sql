@@ -78,3 +78,18 @@ CREATE INDEX IF NOT EXISTS idx_error_category ON error_history(user_id, category
 ALTER TABLE vocabulary ADD COLUMN ease_factor REAL DEFAULT 2.5;
 ALTER TABLE vocabulary ADD COLUMN interval INTEGER DEFAULT 0;
 ALTER TABLE vocabulary ADD COLUMN last_reviewed_at DATETIME;
+
+CREATE TABLE IF NOT EXISTS ielts_scores (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL REFERENCES users(id),
+    module          TEXT NOT NULL CHECK(module IN ('writing_task1','writing_task2','speaking','reading')),
+    band_score      REAL NOT NULL,
+    details         TEXT DEFAULT '{}',
+    prompt          TEXT DEFAULT '',
+    user_response   TEXT DEFAULT '',
+    feedback        TEXT DEFAULT '',
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ielts_user_module ON ielts_scores(user_id, module);
+CREATE INDEX IF NOT EXISTS idx_ielts_user_date ON ielts_scores(user_id, created_at);

@@ -81,5 +81,11 @@ func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, openAIKey, openAIBase
 		protected.POST("/create-invoice", invoiceHandler(botToken, sugar))
 		protected.GET("/errors/history", rateMw, errorsHistoryHandler(db, sugar))
 		protected.GET("/errors/stats", rateMw, errorsStatsHandler(db, sugar))
+		protected.POST("/ielts/writing", rateMw, ieltsWritingHandler(db, aiClient, sugar))
+		protected.GET("/ielts/speaking", rateMw, ieltsSpeakingGenerateHandler(db, aiClient, sugar))
+		protected.POST("/ielts/speaking", rateMw, ieltsSpeakingEvaluateHandler(db, aiClient, sugar))
+		protected.GET("/ielts/reading", rateMw, ieltsReadingGenerateHandler(db, aiClient, sugar))
+		protected.POST("/ielts/reading/submit", rateMw, ieltsReadingEvaluateHandler(db, aiClient, sugar))
+		protected.GET("/ielts/scores", rateMw, ieltsScoresHandler(db, sugar))
 	}
 }
