@@ -18,12 +18,24 @@ type Correction struct {
 	ExplanationUz string `json:"explanation_uz"`
 	ExplanationRu string `json:"explanation_ru"`
 	Type          string `json:"type"`
+	Severity      string `json:"severity,omitempty"`
+	Category      string `json:"category,omitempty"`
+	LearningTip   string `json:"learning_tip,omitempty"`
+	RuleViolated  string `json:"rule_violated,omitempty"`
+}
+
+type PremiumAnalysis struct {
+	OverallGrade        string   `json:"overall_grade"`
+	Strengths           []string `json:"strengths"`
+	AreasForImprovement []string `json:"areas_for_improvement"`
+	SuggestedTopic      string   `json:"suggested_topic"`
 }
 
 type ChatResponse struct {
-	Reply       string       `json:"reply"`
-	Corrections []Correction `json:"corrections"`
-	Usage       Usage        `json:"usage"`
+	Reply           string           `json:"reply"`
+	Corrections     []Correction     `json:"corrections"`
+	Usage           Usage            `json:"usage"`
+	PremiumAnalysis *PremiumAnalysis `json:"premium_analysis,omitempty"`
 }
 
 type Usage struct {
@@ -61,8 +73,9 @@ type InvoiceResponse struct {
 }
 
 type AIResponse struct {
-	Reply       string       `json:"reply"`
-	Corrections []Correction `json:"corrections"`
+	Reply           string           `json:"reply"`
+	Corrections     []Correction     `json:"corrections"`
+	PremiumAnalysis *PremiumAnalysis `json:"premium_analysis,omitempty"`
 }
 
 type ErrorResponse struct {
@@ -181,4 +194,43 @@ type VocabListResponse struct {
 	Words    []VocabWord `json:"words"`
 	Total    int         `json:"total"`
 	DueCount int         `json:"due_count"`
+}
+
+type ErrorHistoryEntry struct {
+	ID            int       `db:"id" json:"id"`
+	UserID        int       `db:"user_id" json:"user_id"`
+	Original      string    `db:"original" json:"original"`
+	Corrected     string    `db:"corrected" json:"corrected"`
+	Category      string    `db:"category" json:"category"`
+	Severity      string    `db:"severity" json:"severity"`
+	RuleViolated  string    `db:"rule_violated" json:"rule_violated"`
+	LearningTip   string    `db:"learning_tip" json:"learning_tip"`
+	Context       string    `db:"context" json:"context"`
+	CreatedAt     time.Time `db:"created_at" json:"created_at"`
+}
+
+type ErrorStats struct {
+	TotalErrors       int                       `json:"total_errors"`
+	CategoryCounts    map[string]int            `json:"category_counts"`
+	SeverityCounts    map[string]int            `json:"severity_counts"`
+	MostFrequentRules []string                  `json:"most_frequent_rules"`
+	CategoryTrend     []ErrorCategoryDayEntry   `json:"category_trend,omitempty"`
+}
+
+type ErrorCategoryDayEntry struct {
+	Date        string `json:"date"`
+	Grammar     int    `json:"grammar"`
+	Vocabulary  int    `json:"vocabulary"`
+	Spelling    int    `json:"spelling"`
+	WordOrder   int    `json:"word_order"`
+	Punctuation int    `json:"punctuation"`
+}
+
+type ErrorHistoryResponse struct {
+	Entries []ErrorHistoryEntry `json:"entries"`
+	Total   int                 `json:"total"`
+}
+
+type ErrorStatsRequest struct {
+	Days int `form:"days"`
 }

@@ -1,235 +1,308 @@
-# Frontend UI — Lingvo AI Mini App
+# Продвинутый анализ ошибок (Advanced Error Analysis)
 
-**Created:** 2026-06-06
-**Mode:** Fast
-**Testing:** Yes
-**Logging:** Verbose
+**Ветка:** `feature/advanced-error-analysis`
+**Дата:** 2026-06-08
+**Тип:** Enhancement (Premium Feature)
 
----
+## Roadmap Linkage
+
+- **Milestone:** "Premium Features"
+- **Rationale:** Продвинутый анализ ошибок — ключевая премиум-функция, указанная в ROADMAP.md для Этапа 3
+
+## Settings
+
+| Параметр | Значение |
+|----------|----------|
+| Тесты | Да |
+| Логирование | Verbose (DEBUG) |
+| Документация | Нет |
+
+## Краткое описание
+
+Продвинутый анализ ошибок — премиум-функция для глубокого анализа грамматических/лексических ошибок пользователя. Поверх уже существующего premium_analysis (severity, category, learning_tip, rule_violated, OverallGrade) добавляет:
+
+1. **История ошибок** — сохранение каждой correction в БД
+2. **Статистика ошибок** — группировка по категориям, severity, датам
+3. **Анализ паттернов** — какие ошибки повторяются, прогресс по категориям
+4. **Улучшенный промпт** — передача истории ошибок в контекст AI
 
 ## Tasks
 
-### Phase 1: Foundation
+### Phase 1: Бэкенд — База данных
+
+#### Task 1.1: Создать таблицу error_history в schema.sql
+
+**Файл:** `internal/db/schema.sql`
+
+Добавить новую таблицу:
+
+```sql
+CREATE TABLE IF NOT EXISTS error_history (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL REFERENCES users(id),
+    message_id      INTEGER REFERENCES messages(id),
+    original        TEXT NOT NULL,
+    corrected       TEXT NOT NULL,
+    category        TEXT NOT NULL DEFAULT 'grammar',
+    severity        TEXT NOT NULL DEFAULT 'minor',
+    rule_violated   TEXT DEFAULT '',
+    learning_tip    TEXT DEFAULT '',
+    context         TEXT DEFAULT '',
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_error_user_date ON error_history(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_error_category ON error_history(user_id, category);
+```
+
+**Логирование:** INFO при создании таблицы (в `db.go`, уже есть)
+
+#### Task 1.2: Создать error_history CRUD в internal/db/
+
+**Новый файл:** `internal/db/error_history.go`
+
+Функции:
+- `SaveError(ctx, db, userID, original, corrected, category, severity, ruleViolated, learningTip, context, messageID) error`
+- `GetErrorHistory(ctx, db, userID, limit, offset) ([]ErrorHistoryEntry, error)`
+- `GetErrorStats(ctx, db, userID) (*ErrorStats, error)` — группировка: `{category_counts: map[string]int, severity_counts: map[string]int, total: int, most_frequent_rules: []string, category_trend: []CategoryDayEntry}`
+- `GetErrorCategoryTrend(ctx, db, userID, days) ([]CategoryDayEntry, error)` — ошибки по категориям за N дней
+
+**Новые типы в `internal/models/types.go`:**
+```go
+type ErrorHistoryEntry struct {
+    ID          int       `db:"id" json:"id"`
+    UserID      int       `db:"user_id" json:"user_id"`
+    MessageID   *int      `db:"message_id" json:"message_id,omitempty"`
+    Original    string    `db:"original" json:"original"`
+    Corrected   string    `db:"corrected" json:"corrected"`
+    Category    string    `db:"category" json:"category"`
+    Severity    string    `db:"severity" json:"severity"`
+    RuleViolated string   `db:"rule_violated" json:"rule_violated"`
+    LearningTip  string   `db:"learning_tip" json:"learning_tip"`
+    Context     string    `db:"context" json:"context"`
+    CreatedAt   time.Time `db:"created_at" json:"created_at"`
+}
+
+type ErrorStats struct {
+    TotalErrors     int            `json:"total_errors"`
+    CategoryCounts  map[string]int `json:"category_counts"`
+    SeverityCounts  map[string]int `json:"severity_counts"`
+    MostFrequentRules []string     `json:"most_frequent_rules"`
+    CategoryTrend   []CategoryDayEntry `json:"category_trend,omitempty"`
+}
+
+type CategoryDayEntry struct {
+    Date     string `json:"date"`
+    Grammar  int    `json:"grammar"`
+    Vocabulary int  `json:"vocabulary"`
+    Spelling int    `json:"spelling"`
+    WordOrder int   `json:"word_order"`
+    Punctuation int `json:"punctuation"`
+}
+```
+
+**Логирование:**
+- DEBUG: `"error history saved" user_id, category, severity`
+- WARN: `"error history save failed" user_id, error`
+
+### Phase 2: Бэкенд — AI и API
+
+#### Task 2.1: Обновить chat.go и chat_stream.go для сохранения ошибок
+
+**Файлы:** `internal/api/chat.go`, `internal/api/chat_stream.go`
+
+После получения ответа от AI:
+1. Если есть corrections — сохранить каждую в `error_history` через `db.SaveError()`
+2. Передавать `messageID` если есть
+3. Сохранять контекст (оригинальное сообщение пользователя, обрезанное до 500 символов)
+
+Для premium-пользователей дополнительно: передавать `context` с полным сообщением пользователя.
+Для free — `context: ""`.
+
+**Логирование:**
+- DEBUG: `"saved N corrections to error history" user_id`
+- WARN: `"failed to save error correction" user_id, original, error`
+
+#### Task 2.2: Создать эндпоинт GET /api/errors/history
+
+**Новый файл:** `internal/api/errors.go`
+
+```go
+func errorsHandler(database *sqlx.DB, sugar *zap.SugaredLogger) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        // GET /api/errors/history — пагинированная история
+        // GET /api/errors/stats — статистика ошибок
+    }
+}
+```
 
-#### Task 1: i18n + Telegram SDK + QueryClient setup
+**Эндпоинты:**
+- `GET /api/errors/history?page=1&per_page=20&category=grammar` — возвращает `{entries: [...], total: N}`
+- `GET /api/errors/stats?days=30` — возвращает `ErrorStats`
 
-**Status: ✅ Done**
+**Доступ:** только premium (проверка `is_premium` из контекста).
+Для free-юзеров: `403 {"error": "premium_required"}`
+
+**Ответ /stats:**
+```json
+{
+  "total_errors": 127,
+  "category_counts": {"grammar": 80, "vocabulary": 25, "spelling": 15, "word_order": 5, "punctuation": 2},
+  "severity_counts": {"critical": 12, "major": 45, "minor": 70},
+  "most_frequent_rules": ["Subject-Verb Agreement", "Past Simple vs Present Perfect"],
+  "category_trend": [
+    {"date": "2026-06-01", "grammar": 5, "vocabulary": 2, "spelling": 1, "word_order": 0, "punctuation": 0},
+    ...
+  ]
+}
+```
+
+**Логирование:**
+- DEBUG: `"error stats requested" user_id`
+- WARN: `"error history query failed" user_id, error`
+
+#### Task 2.3: Зарегистрировать эндпоинты в router.go
+
+**Файл:** `internal/api/router.go`
+
+Добавить:
+```go
+protected.GET("/errors/history", rateMw, errorsHistoryHandler(database, sugar))
+protected.GET("/errors/stats", rateMw, errorsStatsHandler(database, sugar))
+```
+
+После регистрации authMw.
+
+#### Task 2.4: Улучшить премиум-промпт с контекстом истории ошибок
+
+**Файл:** `internal/ai/prompts.go`
+
+Создать новую функцию:
+```go
+func BuildPremiumChatPromptWithHistory(level, lang, text string, recentErrors []string) string
+```
+
+Где `recentErrors` — строки вида "1. Past Simple (2 times) — 'I go yesterday'", "2. Subject-Verb (3 times) — 'He don't like'"
+
+Промпт включает:
+- Все правила обычного premium-промпта
+- Дополнительная секция: "The user has been making these errors recently. Pay special attention to them and provide extra detailed explanations when these errors occur."
+- Список недавних ошибок пользователя (top 5 по частоте)
 
-**Files:**
-- `web/src/main.tsx` — инициализация i18next (uz/ru), Telegram SDK init(), QueryClientProvider
-- `web/src/i18n.ts` — конфиг i18next с import ресурсов
+В `chat.go` и `chat_stream.go`:
+- Для premium: достать топ-5 частых ошибок через `db.GetMostFrequentErrors(ctx, db, userID, 5)`
+- Использовать `BuildPremiumChatPromptWithHistory` вместо `BuildPremiumChatPrompt`
 
-**Что сделать:**
-- Создать `web/src/i18n.ts` с i18next + react-i18next, загрузить uz.json/ru.json
-- В `main.tsx`: инициализировать i18n, Telegram init(), обернуть `<App/>` в `<QueryClientProvider>`
-- Учесть `verbatimModuleSyntax: true` — `import type` для типов
-
-**Проверка:** `npm run build` без ошибок
-
-#### Task 2: API client
-
-**Status: ✅ Done**
-
-**Files:**
-- `web/src/api/client.ts`
-
-**Что сделать:**
-- Создать типизированный API клиент: `api<T>(path, body?)` → `Promise<T>`
-- Автоматически добавлять `X-Telegram-Init-Data` из initData.raw()
-- Базовый URL из `import.meta.env.VITE_API_URL || ''`
-- Обработка ошибок: если `!res.ok` — парсить JSON и кидать Error с сообщением
-- Экспорт типов: `ChatRequest`, `ChatResponse`, `Correction`, `Usage`, `SubscriptionResponse`, `InvoiceRequest`, `InvoiceResponse`
-
-#### Task 3: useTelegram hook
-
-**Status: ✅ Done**
-
-**Files:**
-- `web/src/hooks/useTelegram.ts`
-
-**Что сделать:**
-- Хук, возвращающий `{ user, initData, theme, isReady }`
-- Читать `initData.state()` и `themeParams.state()` из SDK
-- Возвращать `isReady: boolean` — true после монтирования
-
-#### Task 4: CSS + index.html update
-
-**Status: ✅ Done**
-
-**Files:**
-- `web/src/index.css` — заменить на Lingvo AI стили
-- `web/index.html` — обновить title, lang, meta
-- `web/src/App.css` — удалить (перенести нужное в index.css)
-
-**Что сделать:**
-- Использовать CSS custom properties с Telegram theme (Telegram SDK vars)
-- Mobile-first, Telegram Mini App (390px)
-- Стили для: чат-пузырей, навбара, карточек подписки, индикатора лимита
-- Темы: светлая/тёмная через Telegram SDK `themeParams`
-
----
-
-### Phase 2: Core Components
-
-#### Task 5: NavBar component
-
-**Status: ✅ Done**
-
-**Files:**
-- `web/src/components/NavBar.tsx`
-- `web/src/components/NavBar.css`
-
-**Что сделать:**
-- Нижняя навигация с 4 табами: Chat, Vocabulary, Progress, Subscription
-- Иконки через SVG/emoji, подпись из i18n
-- Active tab выделен цветом `themeParams.buttonColor`
-- Проп: `active: string, onTabChange: (tab: string) => void`
-
-#### Task 6: LanguageSwitcher component
-
-**Status: ✅ Done**
-
-**Files:**
-- `web/src/components/LanguageSwitcher.tsx`
-
-**Что сделать:**
-- Кнопка переключения UZ ↔ RU
-- Вызов `i18n.changeLanguage()`
-- Отображение текущего языка
-
-#### Task 7: GrammarBlock component
-
-**Status: ✅ Done**
-
-**Files:**
-- `web/src/components/GrammarBlock.tsx`
-- `web/src/components/GrammarBlock.css`
-
-**Что сделать:**
-- Отображение списка исправлений: original → corrected
-- Тип ошибки (grammar/vocabulary/spelling)
-- Объяснение на языке пользователя (explanation_uz/ru)
-- Проп: `corrections: Correction[]`
-
-#### Task 8: UsageIndicator component
-
-**Status: ✅ Done**
-
-**Files:**
-- `web/src/components/UsageIndicator.tsx`
-
-**Что сделать:**
-- Показывает `"Бугун: 4/10"` или `"Чексиз"` для Premium
-- Прогресс-бар (used/limit)
-- Если лимит исчерпан — красный цвет
-- Проп: `usage: Usage`
-
----
-
-### Phase 3: Screens
-
-#### Task 9: Chat screen
-
-**Status: ✅ Done**
-
-**Files:**
-- `web/src/components/Chat.tsx`
-- `web/src/components/Chat.css`
-
-**Что сделать:**
-- Поле ввода + кнопка отправки
-- История сообщений (user ↔ AI) в виде пузырей
-- Отображение GrammarBlock под AI-ответами
-- UsageIndicator внизу
-- Использовать `@tanstack/react-query` для мутации
-- При отправке: POST /api/chat { text }
-- Отображать loading состояние
-- DEBUG-логи в консоль: "chat: sending...", "chat: response received"
-
-#### Task 10: Subscription screen
-
-**Status: ✅ Done**
-
-**Files:**
-- `web/src/components/Subscription.tsx`
-- `web/src/components/Subscription.css`
-
-**Что сделать:**
-- Три карточки: Free (10/день), Weekly (300⭐), Monthly (800⭐)
-- Кнопка "Обуна бўлиш" / "Подписаться"
-- При клике на платный план: POST /api/create-invoice → открыть ссылку
-- GET /api/subscription — показать текущий статус
-- Telegram theme-aware стили
-
-#### Task 11: Vocabulary screen
-
-**Status: ✅ Done**
-
-**Files:**
-- `web/src/components/Vocabulary.tsx`
-- `web/src/components/Vocabulary.css`
-
-**Что сделать:**
-- Экран-заглушка с текстом "Ҳали сўзлар йўқ" / "Слов пока нет"
-- Кнопка "+ Добавить" (заглушка — API ещё не готов)
-- Подготовить структуру для будущего списка слов
-
-#### Task 12: Progress screen
-
-**Status: ✅ Done**
-
-**Files:**
-- `web/src/components/Progress.tsx`
-- `web/src/components/Progress.css`
-
-**Что сделать:**
-- Экран-заглушка с отображением уровня (из user)
-- Статистика: сообщения, слова, streak
-- Подготовить структуру для будущих графиков
-
----
-
-### Phase 4: Integration
-
-#### Task 13: App.tsx — root layout + navigation
-
-**Status: ✅ Done**
-
-**Files:**
-- `web/src/App.tsx`
-
-**Что сделать:**
-- Tab-маршрутизация через useState (Chat / Vocabulary / Progress / Subscription)
-- Верхняя панель: LanguageSwitcher + title
-- Нижняя панель: NavBar
-- Основная область: рендер выбранного экрана
-- Telegram theme integration через useTelegram
-
-#### Task 14: Tests
-
-**Status: ✅ Done**
-
-**Files:**
-- `web/src/components/__tests__/Chat.test.tsx`
-- `web/src/components/__tests__/NavBar.test.tsx`
-- `web/src/components/__tests__/UsageIndicator.test.tsx`
-- `web/vitest.config.ts`
-
-**Что сделать:**
-- Установить vitest + @testing-library/react + jsdom
-- Создать vitest.config.ts
-- Тест NavBar: рендер 4 табов, клик переключает active
-- Тест UsageIndicator: рендер "4/10", рендер "Premium"
-- Тест Chat: рендер формы, вызов API при отправке (mock)
-
----
+**Логирование:**
+- DEBUG: `"included N recent errors in prompt context" user_id, errors_count`
+
+### Phase 3: Фронтенд — Error Dashboard
+
+#### Task 3.1: Создать компонент ErrorDashboard
+
+**Новый файл:** `web/src/components/ErrorDashboard.tsx`
+
+Компонент для отображения статистики ошибок. Состоит из:
+1. **Total errors counter** — общее количество ошибок (большая цифра)
+2. **Category breakdown** — карточки с количеством ошибок по каждой категории (грамматика, лексика, орфография, порядок слов, пунктуация) с цветовой индикацией
+3. **Severity distribution** — круговая диаграмма или столбцы critical/major/minor
+4. **Most frequent rules** — список самых частых нарушаемых правил
+5. **Category trend chart** — BarChart (recharts) с количеством ошибок по дням с разбивкой по категориям
+
+Использует `isLoading &&` pattern для загрузки данных.
+
+**API функции в `client.ts`:**
+```typescript
+export async function getErrorStats(days?: number): Promise<ErrorStatsResponse>
+export async function getErrorHistory(page?: number, perPage?: number, category?: string): Promise<ErrorHistoryResponse>
+```
+
+**Логирование:** console.debug для каждого запроса к API.
+
+#### Task 3.2: Обновить App.tsx и NavBar для вкладки Error Analysis
+
+**Файлы:** `web/src/App.tsx`, `web/src/components/NavBar.tsx`
+
+- Добавить новую вкладку `errors` в NavBar (только для premium)
+- В `App.tsx`: рендерить `ErrorDashboard` при `activeTab === 'errors'`
+- Иконка: 📊 или диаграмма
+
+#### Task 3.3: Добавить i18n ключи для Error Dashboard
+
+**Файлы:** `web/src/locales/uz.json`, `web/src/locales/ru.json`
+
+Добавить ключи:
+```json
+{
+  "errors": {
+    "title": "Ошибки / Xatolar",
+    "total_errors": "Всего ошибок / Jami xatolar",
+    "by_category": "По категориям / Kategoriyalar bo'yicha",
+    "by_severity": "По серьёзности / Jiddiyligi bo'yicha",
+    "frequent_rules": "Частые правила / Tez-tez uchraydigan qoidalar",
+    "trend": "Динамика / Dinamika",
+    "premium_only": "Только для Premium / Faqat Premium uchun",
+    "no_errors": "Нет ошибок / Xatolar yo'q",
+    "grammar": "Грамматика / Grammatika",
+    "vocabulary": "Лексика / Leksika",
+    "spelling": "Орфография / Imlo",
+    "word_order": "Порядок слов / So'z tartibi",
+    "punctuation": "Пунктуация / Tinish belgilari",
+    "critical": "Критические / Kritik",
+    "major": "Важные / Muhim",
+    "minor": "Незначительные / Kichik"
+  }
+}
+```
+
+#### Task 3.4: Обновить Progress.tsx с интеграцией ошибок
+
+**Файл:** `web/src/components/Progress.tsx`
+
+Для premium-пользователей добавить блок "Recent Errors Summary" в дашборд прогресса:
+- Показывать последние 5 ошибок
+- Ссылка на полный анализ (переключение на вкладку errors)
+
+### Phase 4: Тесты
+
+#### Task 4.1: Go unit-тесты для error_history
+
+**Новый файл:** `internal/db/error_history_test.go`
+
+Табличные тесты:
+- `TestSaveError` — сохранение одной записи
+- `TestGetErrorHistory` — получение истории с пагинацией
+- `TestGetErrorStats` — проверка группировки по категориям
+- `TestGetErrorCategoryTrend` — проверка тренда за N дней
+
+#### Task 4.2: Go unit-тесты для эндпоинтов
+
+**Новый файл:** `internal/api/errors_test.go`
+
+Тесты:
+- `TestErrorsHistoryHandler` — проверка ответа, пагинации, premium gate
+- `TestErrorsStatsHandler` — проверка статистики
+- `TestErrorsHistoryPermission` — free user получает 403
+
+#### Task 4.3: Vitest тесты для ErrorDashboard
+
+**Новый файл:** `web/src/components/__tests__/ErrorDashboard.test.tsx`
+
+Тесты:
+- Рендеринг компонента
+- Отображение загрузки (isLoading)
+- Отображение данных (total, categories, severity)
+- Отображение "premium only" для не-premium
+- Отображение "no errors" для пустого списка
 
 ## Commit Plan
 
-| # | Задачи | Сообщение |
-|---|--------|-----------|
-| 1 | Tasks 1-4 (Foundation) | `feat(web): add app foundation — i18n, api client, telegram hooks, css` |
-| 2 | Tasks 5-8 (Core Components) | `feat(web): add core components — NavBar, LanguageSwitcher, GrammarBlock, UsageIndicator` |
-| 3 | Tasks 9-10 (Screens) | `feat(web): add Chat and Subscription screens` |
-| 4 | Tasks 11-12 (Placeholder screens) | `feat(web): add Vocabulary and Progress placeholder screens` |
-| 5 | Tasks 13-14 (Integration + Tests) | `feat(web): integrate layout, add navigation and tests` |
+| # | Коммит | Задачи |
+|---|--------|--------|
+| 1 | `feat(db): add error_history table and CRUD` | 1.1, 1.2 |
+| 2 | `feat(api): save error corrections to history` | 2.1 |
+| 3 | `feat(api): add /api/errors/history and /api/errors/stats endpoints` | 2.2, 2.3 |
+| 4 | `feat(ai): improve premium prompt with error history context` | 2.4 |
+| 5 | `feat(web): add ErrorDashboard component` | 3.1 |
+| 6 | `feat(web): integrate error analysis in NavBar and Progress` | 3.2, 3.3, 3.4 |
+| 7 | `test: add tests for error history and dashboard` | 4.1, 4.2, 4.3 |

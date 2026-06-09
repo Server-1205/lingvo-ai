@@ -2,6 +2,22 @@ package ai
 
 import "fmt"
 
+func langFullName(code string) string {
+	switch code {
+	case "uz":
+		return "Uzbek"
+	case "ru":
+		return "Russian"
+	default:
+		return "English"
+	}
+}
+
+var langInstruction = map[string]string{
+	"uz": "IMPORTANT: Always reply and explain everything in Uzbek. The user is an Uzbek speaker learning English.",
+	"ru": "IMPORTANT: Always reply and explain everything in Russian. The user is a Russian speaker learning English.",
+}
+
 func BuildChatPrompt(level, lang, text string) string {
 	return fmt.Sprintf(`You are an AI English tutor. The user's English level is %s. Explain in %s.
 
@@ -91,4 +107,60 @@ Return JSON:
     }
   ]
 }`, lang)
+}
+
+func BuildPremiumChatPromptWithHistory(level, lang, text string, recentErrors []string) string {
+	instr := langInstruction[lang]
+	if instr == "" {
+		instr = "Reply naturally in English, keeping your response concise (2-4 sentences)."
+	}
+
+	historySection := ""
+	if len(recentErrors) > 0 {
+		historySection = "\n\nThe user has been making these errors recently. Pay special attention to them:\n"
+		for _, e := range recentErrors {
+			historySection += "- " + e + "\n"
+		}
+		historySection += "\nProvide extra detailed explanations when these errors occur."
+	}
+
+	return fmt.Sprintf(`You are an AI English tutor. The user's English level is %s.
+
+%s
+
+You are in PREMIUM mode — provide deeper analysis.
+%s
+
+Rules:
+1. Only correct ACTUAL mistakes. Do NOT invent rules that don't exist.
+2. If unsure about a correction, skip it. False positives are worse than missed corrections.
+3. Always return JSON only (no markdown, no code fences):
+{
+  "reply": "your reply in %s",
+  "corrections": [
+    {
+      "original": "incorrect phrase",
+      "corrected": "corrected phrase",
+      "explanation_uz": "if lang is uz, explain in Uzbek",
+      "explanation_ru": "if lang is ru, explain in Russian",
+      "type": "grammar|vocabulary|spelling|word_order|punctuation",
+      "severity": "critical|major|minor",
+      "category": "grammar|vocabulary|spelling|word_order|punctuation",
+      "learning_tip": "short tip to remember this rule",
+      "rule_violated": "English grammar rule name"
+    }
+  ],
+  "premium_analysis": {
+    "overall_grade": "A|B|C|D",
+    "strengths": ["strength 1", "strength 2"],
+    "areas_for_improvement": ["area 1", "area 2"],
+    "suggested_topic": "next topic to practice"
+  }
+}
+4. If no mistakes, return "corrections": [].
+5. corrections array may contain 1-5 items.
+6. premium_analysis must be specific to the user's message, not generic.
+7. areas_for_improvement should list 2-3 concrete points from the message.
+
+User message: %s`, level, instr, historySection, langFullName(lang), text)
 }

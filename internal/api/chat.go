@@ -13,6 +13,8 @@ import (
 	"github.com/lingvo-ai/lingvo/internal/models"
 )
 
+const maxContextLen = 200
+
 func chatHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if aiClient == nil {
@@ -40,7 +42,17 @@ func chatHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLogge
 		limit, _ := dailyLimit.(int)
 		premium, _ := isPremium.(bool)
 
-		prompt := ai.BuildChatPrompt(lvl, lng, req.Text)
+		var prompt string
+		if premium {
+			recentErrors, err := db.GetRecentErrorContext(c.Request.Context(), database, uid, 5)
+			if err != nil {
+				sugar.Debugw("failed to get recent errors for premium prompt", "user_id", uid, "error", err)
+			}
+			prompt = ai.BuildPremiumChatPromptWithHistory(lvl, lng, req.Text, recentErrors)
+			sugar.Infow("premium chat with error history", "user_id", uid)
+		} else {
+			prompt = ai.BuildChatPrompt(lvl, lng, req.Text)
+		}
 
 		aiResp, err := aiClient.Chat(c.Request.Context(), prompt)
 		if err != nil {
@@ -64,6 +76,33 @@ func chatHandler(database *sqlx.DB, aiClient *ai.Client, sugar *zap.SugaredLogge
 					ExplanationRu: cr.ExplanationRu,
 					Type:          cr.Type,
 				})
+			}
+		}
+
+		if len(corrections) > 0 {
+			context := req.Text
+			if len(context) > maxContextLen {
+				context = context[:maxContextLen]
+			}
+			for _, cr := range corrections {
+				sev := cr.Severity
+				if sev == "" {
+					sev = "minor"
+				}
+				cat := cr.Category
+				if cat == "" {
+					cat = cr.Type
+					if cat == "" {
+						cat = "grammar"
+					}
+				}
+				if err := db.SaveError(c.Request.Context(), database, uid,
+					cr.Original, cr.Corrected, cat, sev,
+					cr.RuleViolated, cr.LearningTip, context); err != nil {
+					sugar.Warnw("failed to save error correction", "user_id", uid, "error", err)
+				} else {
+					sugar.Debugw("error correction saved", "user_id", uid, "category", cat, "severity", sev)
+				}
 			}
 		}
 

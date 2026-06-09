@@ -1,21 +1,25 @@
 import { useTranslation } from 'react-i18next';
 
-export type Tab = 'chat' | 'vocab' | 'progress' | 'subscription';
+export type Tab = 'chat' | 'vocab' | 'progress' | 'subscription' | 'errors';
 
 interface NavBarProps {
   active: Tab;
   onTabChange: (tab: Tab) => void;
+  isPremium?: boolean;
 }
 
-const tabs: { key: Tab; icon: string; labelKey: string }[] = [
+const tabs: { key: Tab; icon: string; labelKey: string; premium?: boolean }[] = [
   { key: 'chat', icon: '💬', labelKey: 'nav.chat' },
   { key: 'vocab', icon: '📚', labelKey: 'nav.vocab' },
   { key: 'progress', icon: '📊', labelKey: 'nav.progress' },
   { key: 'subscription', icon: '⭐', labelKey: 'nav.subscription' },
+  { key: 'errors', icon: '🔍', labelKey: 'nav.errors', premium: true },
 ];
 
-export function NavBar({ active, onTabChange }: NavBarProps) {
+export function NavBar({ active, onTabChange, isPremium }: NavBarProps) {
   const { t } = useTranslation();
+
+  const visibleTabs = isPremium ? tabs : tabs.filter(t => !t.premium);
 
   return (
     <nav style={{
@@ -29,7 +33,7 @@ export function NavBar({ active, onTabChange }: NavBarProps) {
       paddingBottom: 'var(--safe-bottom)',
       zIndex: 100,
     }}>
-      {tabs.map(tab => (
+      {visibleTabs.map(tab => (
         <button
           key={tab.key}
           onClick={() => onTabChange(tab.key)}

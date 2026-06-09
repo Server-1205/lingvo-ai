@@ -52,5 +52,7 @@ func RegisterRoutes(r *gin.Engine, db *sqlx.DB, geminiKey, openAIKey, openAIBase
 		protected.GET("/progress/history", progressHistoryHandler(db, sugar))
 		protected.GET("/subscription", subscriptionHandler(db))
 		protected.POST("/create-invoice", invoiceHandler(botToken, sugar))
+		protected.GET("/errors/history", rateMw, errorsHistoryHandler(db, sugar))
+		protected.GET("/errors/stats", rateMw, errorsStatsHandler(db, sugar))
 	}
 }

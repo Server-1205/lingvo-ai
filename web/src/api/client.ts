@@ -12,6 +12,17 @@ export interface Correction {
   explanation_uz: string;
   explanation_ru: string;
   type: string;
+  severity?: string;
+  category?: string;
+  learning_tip?: string;
+  rule_violated?: string;
+}
+
+export interface PremiumAnalysis {
+  overall_grade: string;
+  strengths: string[];
+  areas_for_improvement: string[];
+  suggested_topic: string;
 }
 
 export interface Usage {
@@ -24,6 +35,7 @@ export interface ChatResponse {
   reply: string;
   corrections: Correction[];
   usage: Usage;
+  premium_analysis?: PremiumAnalysis;
 }
 
 export interface SubscriptionResponse {
@@ -367,6 +379,55 @@ export async function submitReview(wordId: number, quality: number): Promise<Rev
     method: 'POST',
     body: JSON.stringify({ word_id: wordId, quality }),
   });
+}
+
+export interface ErrorHistoryEntry {
+  id: number;
+  user_id: number;
+  original: string;
+  corrected: string;
+  category: string;
+  severity: string;
+  rule_violated: string;
+  learning_tip: string;
+  context: string;
+  created_at: string;
+}
+
+export interface ErrorHistoryResponse {
+  entries: ErrorHistoryEntry[];
+  total: number;
+}
+
+export interface ErrorStatsResponse {
+  total_errors: number;
+  category_counts: Record<string, number>;
+  severity_counts: Record<string, number>;
+  most_frequent_rules: string[];
+  category_trend?: ErrorCategoryDayEntry[];
+}
+
+export interface ErrorCategoryDayEntry {
+  date: string;
+  grammar: number;
+  vocabulary: number;
+  spelling: number;
+  word_order: number;
+  punctuation: number;
+}
+
+export async function getErrorHistory(page?: number, perPage?: number, category?: string): Promise<ErrorHistoryResponse> {
+  const params = new URLSearchParams();
+  if (page) params.set('page', String(page));
+  if (perPage) params.set('per_page', String(perPage));
+  if (category) params.set('category', category);
+  return request<ErrorHistoryResponse>(`/api/errors/history?${params}`);
+}
+
+export async function getErrorStats(days?: number): Promise<ErrorStatsResponse> {
+  const params = new URLSearchParams();
+  if (days) params.set('days', String(days));
+  return request<ErrorStatsResponse>(`/api/errors/stats?${params}`);
 }
 
 export { ApiError };

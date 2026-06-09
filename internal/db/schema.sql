@@ -59,6 +59,22 @@ CREATE INDEX IF NOT EXISTS idx_messages_user_date ON messages(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_vocab_user ON vocabulary(user_id);
 CREATE INDEX IF NOT EXISTS idx_progress_user_date ON daily_progress(user_id, date);
 
+CREATE TABLE IF NOT EXISTS error_history (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL REFERENCES users(id),
+    original        TEXT NOT NULL,
+    corrected       TEXT NOT NULL,
+    category        TEXT NOT NULL DEFAULT 'grammar',
+    severity        TEXT NOT NULL DEFAULT 'minor',
+    rule_violated   TEXT DEFAULT '',
+    learning_tip    TEXT DEFAULT '',
+    context         TEXT DEFAULT '',
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_error_user_date ON error_history(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_error_category ON error_history(user_id, category);
+
 ALTER TABLE vocabulary ADD COLUMN ease_factor REAL DEFAULT 2.5;
 ALTER TABLE vocabulary ADD COLUMN interval INTEGER DEFAULT 0;
 ALTER TABLE vocabulary ADD COLUMN last_reviewed_at DATETIME;
