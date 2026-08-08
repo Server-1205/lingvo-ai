@@ -21,15 +21,25 @@ func GetActiveSubscription(ctx context.Context, db *sqlx.DB, userID int) (*model
 }
 
 func SaveSubscription(ctx context.Context, db *sqlx.DB, userID int, plan string, starsAmount int, expiresAt string) error {
-	_, err := db.ExecContext(ctx, `
-		INSERT INTO subscriptions (user_id, plan, stars_amount, expires_at)
-		VALUES (?, ?, ?, ?)
-		ON CONFLICT(user_id) DO UPDATE SET
-			plan = excluded.plan,
-			stars_amount = excluded.stars_amount,
-			expires_at = excluded.expires_at,
-			started_at = CURRENT_TIMESTAMP
-	`, userID, plan, starsAmount, expiresAt)
+	newExpiry, _ := time.Parse("2006-01-02 15:04:05", expiresAt)
+	duration := newExpiry.Sub(time.Now().UTC())
+
+	var existing models.Subscription
+	err := db.GetContext(ctx, &existing,
+		"SELECT * FROM subscriptions WHERE user_id = ? AND expires_at > datetime('now')",
+		userID)
+
+	if err == nil {
+		extended := existing.ExpiresAt.Add(duration)
+		_, err = db.ExecContext(ctx, `
+			UPDATE subscriptions SET plan = ?, stars_amount = stars_amount + ?, expires_at = ? WHERE user_id = ?
+		`, plan, starsAmount, extended.Format("2006-01-02 15:04:05"), userID)
+	} else {
+		_, err = db.ExecContext(ctx, `
+			INSERT INTO subscriptions (user_id, plan, stars_amount, expires_at)
+			VALUES (?, ?, ?, ?)
+		`, userID, plan, starsAmount, expiresAt)
+	}
 	return err
 }
 

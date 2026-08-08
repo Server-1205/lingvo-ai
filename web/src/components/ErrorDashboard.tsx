@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getErrorStats, getErrorHistory } from '../api/client';
 import type { ErrorStatsResponse, ErrorHistoryEntry } from '../api/client';
+import { LoadingDots } from './LoadingDots';
+import { debug } from '../lib/debug';
 
 const categoryIcons: Record<string, string> = {
   grammar: '📖',
@@ -44,7 +46,7 @@ export function ErrorDashboard() {
       const data = await getErrorStats(30);
       setStats(data);
     } catch (err) {
-      console.debug('[errors] failed to load stats', (err as Error).message);
+      debug('[errors] failed to load stats', (err as Error).message);
       if ((err as any)?.status === 403) {
         setError('premium_only');
       } else {
@@ -62,14 +64,15 @@ export function ErrorDashboard() {
       setHistoryTotal(data.total);
       setHistoryPage(page);
     } catch {
-      console.debug('[errors] failed to load history');
+      debug('[errors] failed to load history');
     }
   };
 
   if (isLoading) {
     return (
-      <div style={{ padding: 24, textAlign: 'center', color: 'var(--tg-hint)' }}>
-        {t('common.loading')}
+      <div style={{ padding: 56, textAlign: 'center', color: 'var(--tg-hint)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        <LoadingDots size={14} />
+        <div>{t('common.loading')}</div>
       </div>
     );
   }

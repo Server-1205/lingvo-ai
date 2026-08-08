@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LoadingDots } from './LoadingDots';
 import { useQuery } from '@tanstack/react-query';
 import { getProgress, getProgressHistory } from '../api/client';
 import { ProgressChart } from './ProgressChart';
+import { debug } from '../lib/debug';
 
 interface ProgressViewProps {
   onStartLevelTest?: () => void;
@@ -24,9 +26,9 @@ export function ProgressView({ onStartLevelTest }: ProgressViewProps) {
     queryFn: () => getProgressHistory(period),
   });
 
-  console.debug('[progress] chart mounted, period=' + period);
+  debug('[progress] chart mounted, period=' + period);
   if (history) {
-    console.debug('[progress] history loaded', history.entries.length, 'entries');
+    debug('[progress] history loaded', history.entries.length, 'entries');
   }
 
   return (
@@ -35,7 +37,7 @@ export function ProgressView({ onStartLevelTest }: ProgressViewProps) {
 
       {isLoading && (
         <div className="placeholder">
-          <div className="placeholder-icon">⏳</div>
+          <LoadingDots size={14} />
           <div>{t('common.loading')}</div>
         </div>
       )}
@@ -72,7 +74,7 @@ export function ProgressView({ onStartLevelTest }: ProgressViewProps) {
         <ProgressChart
           data={history.entries}
           onPeriodChange={(d) => {
-            console.debug('[progress] chart updated to period=' + d);
+            debug('[progress] chart updated to period=' + d);
             setPeriod(d);
           }}
         />

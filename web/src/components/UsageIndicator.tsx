@@ -20,7 +20,7 @@ export function UsageIndicator({ usage, onUpgrade }: UsageIndicatorProps) {
         fontSize: 13,
       }}>
         <span style={{ color: 'var(--c-primary)', fontWeight: 600 }}>
-          ⭐ Unlimited
+          ⭐ {t('chat.unlimited')}
         </span>
       </div>
     );

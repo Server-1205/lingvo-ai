@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LoadingDots } from './LoadingDots';
 import { useQuery } from '@tanstack/react-query';
 import { getIeltsScores } from '../api/client';
 import type { IeltsScoreStats } from '../api/client';
@@ -117,7 +118,7 @@ export function IeltsDashboard() {
 
         {scoresQuery.isLoading && (
           <div className="placeholder" style={{ marginTop: 24 }}>
-            <div className="placeholder-icon">⏳</div>
+            <LoadingDots size={14} />
             <div>{t('common.loading')}</div>
           </div>
         )}

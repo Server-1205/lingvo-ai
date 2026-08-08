@@ -10,6 +10,7 @@ vi.mock('react-i18next', () => ({
       }
       if (key === 'chat.limit_exhausted') return 'Дневной лимит исчерпан';
       if (key === 'chat.get_unlimited') return 'Получить безлимит';
+      if (key === 'chat.unlimited') return 'Безлимит';
       return key;
     },
   }),
@@ -21,9 +22,9 @@ describe('UsageIndicator', () => {
     expect(screen.getByText('Сегодня: 4/10')).toBeInTheDocument();
   });
 
-  it('shows Unlimited for premium users', () => {
+  it('shows unlimited text for premium users', () => {
     render(<UsageIndicator usage={{ daily_used: 0, daily_limit: 0, is_premium: true }} />);
-    expect(screen.getByText(/Unlimited/)).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Безлимит'))).toBeInTheDocument();
   });
 
   it('shows exhausted message and upgrade button when limit reached', () => {

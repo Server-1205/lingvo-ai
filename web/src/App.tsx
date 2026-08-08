@@ -15,6 +15,7 @@ import { DailyLesson } from './components/DailyLesson';
 import { useTelegram } from './hooks/useTelegram';
 import { getSubscription } from './api/client';
 import type { SubscriptionResponse } from './api/client';
+import { debug } from './lib/debug';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('chat');
@@ -44,14 +45,14 @@ function App() {
       const urlParams = new URLSearchParams(window.location.search);
       const urlStartParam = urlParams.get('startapp') || tgStartParam;
       if (urlStartParam === 'review') {
-        console.debug('[app] deep-link start_param=review → navigating to vocab/review');
+        debug('[app] deep-link start_param=review → navigating to vocab/review');
         setActiveTab('vocab');
         setVocabInitialTab('review');
       } else if (urlStartParam === 'daily') {
-        console.debug('[app] deep-link start_param=daily → showing daily lesson');
+        debug('[app] deep-link start_param=daily → showing daily lesson');
         setShowDailyLesson(true);
       } else if (urlStartParam) {
-        console.debug('[app] deep-link start_param=' + urlStartParam + ' (unhandled)');
+        debug('[app] deep-link start_param=' + urlStartParam + ' (unhandled)');
       }
     } catch {
       // initData not available outside Telegram

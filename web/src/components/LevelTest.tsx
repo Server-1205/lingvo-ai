@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { saveLevel, getLevelTestQuestions } from '../api/client';
+import { LoadingDots } from './LoadingDots';
 
 interface LevelTestProps {
   onDone: () => void;
@@ -51,7 +52,7 @@ export function LevelTest({ onDone }: LevelTestProps) {
     return (
       <div className="scroll-area" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
         <div className="placeholder">
-          <div className="placeholder-icon">⏳</div>
+          <LoadingDots size={14} />
           <div>{t('common.loading')}</div>
         </div>
       </div>

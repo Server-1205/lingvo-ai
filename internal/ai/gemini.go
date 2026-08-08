@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/google/generative-ai-go/genai"
@@ -23,39 +24,54 @@ type Client struct {
 }
 
 func NewClient(ctx context.Context, apiKey string, openAIKey, openAIBaseURL, openAIModel string, sugar *zap.SugaredLogger) (*Client, error) {
-	genClient, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
-	if err != nil {
-		return nil, err
-	}
-
-	model := genClient.GenerativeModel("gemini-2.0-flash")
-	model.SetTemperature(0.3)
-
-	liteModel := genClient.GenerativeModel("gemini-2.0-flash-lite")
-	liteModel.SetTemperature(0.2)
-
 	var fb *openAIClient
 	if openAIKey != "" {
 		fb = newOpenAIClient(openAIKey, openAIBaseURL, openAIModel)
-		sugar.Infow("openai-compatible fallback configured", "model", openAIModel, "base_url", openAIBaseURL)
+		sugar.Infow("primary AI configured", "model", openAIModel, "base_url", openAIBaseURL)
 	} else {
-		sugar.Warn("OPENAI_API_KEY not set, AI fallback disabled")
+		sugar.Warn("OPENAI_API_KEY not set, OpenAI-compatible AI disabled")
 	}
 
-	return &Client{
-		genClient: genClient,
-		model:     model,
-		liteModel: liteModel,
-		fallback:  fb,
-		sugar:     sugar,
-	}, nil
+	c := &Client{
+		fallback: fb,
+		sugar:    sugar,
+	}
+
+	if apiKey != "" {
+		genClient, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+		if err != nil {
+			sugar.Warnw("failed to init Gemini client, fallback AI only", "error", err)
+		} else {
+			model := genClient.GenerativeModel("gemini-2.0-flash")
+			model.SetTemperature(0.3)
+
+			liteModel := genClient.GenerativeModel("gemini-2.0-flash-lite")
+			liteModel.SetTemperature(0.2)
+
+			c.genClient = genClient
+			c.model = model
+			c.liteModel = liteModel
+			sugar.Info("Gemini fallback configured")
+		}
+	} else {
+		sugar.Info("GEMINI_API_KEY not set, running with primary AI only")
+	}
+
+	if c.fallback == nil && c.model == nil {
+		return nil, fmt.Errorf("no AI provider configured")
+	}
+
+	return c, nil
 }
 
 func (c *Client) Close() error {
 	if c.queue != nil {
 		c.queue.StopWorker()
 	}
-	return c.genClient.Close()
+	if c.genClient != nil {
+		return c.genClient.Close()
+	}
+	return nil
 }
 
 func (c *Client) EnableQueue(ctx context.Context, sugar *zap.SugaredLogger) {
@@ -75,41 +91,43 @@ func (c *Client) IsQueueEnabled() bool {
 }
 
 func (c *Client) GenerateLite(ctx context.Context, prompt string) (string, error) {
-	text, err := c.generateModel(ctx, c.liteModel, prompt)
-	if err == nil {
-		return text, nil
-	}
-
-	c.sugar.Warnw("gemini lite generate failed, trying fallback", "error", err)
 	if c.fallback != nil && c.fallback.IsConfigured() {
-		fallbackText, fbErr := c.fallback.Generate(ctx, prompt)
-		if fbErr == nil {
-			c.sugar.Warn("fallback AI used for lite request")
-			return fallbackText, nil
+		text, err := c.fallback.Generate(ctx, prompt)
+		if err == nil {
+			return text, nil
 		}
-		c.sugar.Errorw("fallback also failed", "error", fbErr)
+		c.sugar.Warnw("primary AI (openai-compatible) lite failed, trying Gemini", "error", err)
 	}
 
-	return "", err
+	if c.liteModel != nil {
+		text, err := c.generateModel(ctx, c.liteModel, prompt)
+		if err == nil {
+			return text, nil
+		}
+		return "", err
+	}
+
+	return "", fmt.Errorf("no AI provider available")
 }
 
 func (c *Client) Generate(ctx context.Context, prompt string) (string, error) {
-	text, err := c.generateModel(ctx, c.model, prompt)
-	if err == nil {
-		return text, nil
-	}
-
-	c.sugar.Warnw("gemini generate failed, trying fallback", "error", err)
 	if c.fallback != nil && c.fallback.IsConfigured() {
-		fallbackText, fbErr := c.fallback.Generate(ctx, prompt)
-		if fbErr == nil {
-			c.sugar.Warn("fallback AI used")
-			return fallbackText, nil
+		text, err := c.fallback.Generate(ctx, prompt)
+		if err == nil {
+			return text, nil
 		}
-		c.sugar.Errorw("fallback also failed", "error", fbErr)
+		c.sugar.Warnw("primary AI (openai-compatible) failed, trying Gemini", "error", err)
 	}
 
-	return "", err
+	if c.model != nil {
+		text, err := c.generateModel(ctx, c.model, prompt)
+		if err == nil {
+			return text, nil
+		}
+		return "", err
+	}
+
+	return "", fmt.Errorf("no AI provider available")
 }
 
 func (c *Client) generateModel(ctx context.Context, model *genai.GenerativeModel, prompt string) (string, error) {
@@ -133,30 +151,26 @@ func (c *Client) generateModel(ctx context.Context, model *genai.GenerativeModel
 }
 
 func (c *Client) Chat(ctx context.Context, prompt string) (*models.AIResponse, error) {
-	text, err := c.chatWithModel(ctx, c.model, prompt)
-	if err == nil && text != "" {
-		return c.parseAIResponse(text)
-	}
-
-	if err != nil {
-		c.sugar.Warnw("gemini chat failed, trying fallback", "error", err)
-	} else {
-		c.sugar.Warn("gemini chat returned empty, trying fallback")
-	}
-
 	if c.fallback != nil && c.fallback.IsConfigured() {
 		fallbackText, fbErr := c.fallback.Generate(ctx, prompt)
 		if fbErr == nil && fallbackText != "" {
-			c.sugar.Warn("fallback AI used for chat")
 			return c.parseAIResponse(fallbackText)
 		}
-		c.sugar.Errorw("fallback also failed for chat", "error", fbErr)
+		c.sugar.Warnw("primary AI (openai-compatible) chat failed, trying Gemini", "error", fbErr)
 	}
 
-	if text != "" {
-		return c.parseAIResponse(text)
+	if c.model != nil {
+		text, err := c.chatWithModel(ctx, c.model, prompt)
+		if err == nil && text != "" {
+			return c.parseAIResponse(text)
+		}
+		if text != "" {
+			return c.parseAIResponse(text)
+		}
+		return nil, err
 	}
-	return nil, err
+
+	return nil, fmt.Errorf("no AI provider available")
 }
 
 func (c *Client) chatWithModel(ctx context.Context, model *genai.GenerativeModel, prompt string) (string, error) {
@@ -201,10 +215,27 @@ func (c *Client) ChatStream(ctx context.Context, prompt string) <-chan StreamEve
 	go func() {
 		defer close(ch)
 
-		iter := c.model.GenerateContentStream(ctx, genai.Text(prompt))
+		// Try OpenAI-compatible streaming first
+		if c.fallback != nil && c.fallback.IsConfigured() {
+			streamCh, err := c.fallback.GenerateStream(ctx, prompt)
+			if err == nil {
+				for evt := range streamCh {
+					ch <- evt
+				}
+				return
+			}
+			c.sugar.Warnw("primary AI (openai-compatible) stream failed, trying Gemini", "error", err)
+		}
 
+		// Fallback to Gemini streaming
+		if c.model == nil {
+			errData, _ := json.Marshal("ai_service_unavailable")
+			ch <- StreamEvent{Type: EventToken, Data: errData}
+			return
+		}
+
+		iter := c.model.GenerateContentStream(ctx, genai.Text(prompt))
 		var fullText strings.Builder
-		geminiFailed := false
 
 		for {
 			chunk, err := iter.Next()
@@ -212,9 +243,10 @@ func (c *Client) ChatStream(ctx context.Context, prompt string) <-chan StreamEve
 				break
 			}
 			if err != nil {
-				c.sugar.Warnw("gemini stream failed, trying fallback", "error", err)
-				geminiFailed = true
-				break
+				c.sugar.Errorw("gemini stream also failed", "error", err)
+				errData, _ := json.Marshal("ai_service_unavailable")
+				ch <- StreamEvent{Type: EventToken, Data: errData}
+				return
 			}
 
 			if len(chunk.Candidates) == 0 || len(chunk.Candidates[0].Content.Parts) == 0 {
@@ -231,27 +263,7 @@ func (c *Client) ChatStream(ctx context.Context, prompt string) <-chan StreamEve
 			}
 		}
 
-		if geminiFailed && c.fallback != nil && c.fallback.IsConfigured() {
-			c.sugar.Warn("fallback AI used for stream")
-			fallbackText, fbErr := c.fallback.Generate(ctx, prompt)
-			if fbErr == nil && fallbackText != "" {
-				var parsedResp models.AIResponse
-				displayText := fallbackText
-				if err := json.Unmarshal([]byte(fallbackText), &parsedResp); err == nil && parsedResp.Reply != "" {
-					displayText = parsedResp.Reply
-				}
-				data, _ := json.Marshal(displayText)
-				ch <- StreamEvent{Type: EventToken, Data: data}
-				fullText.WriteString(fallbackText)
-			} else {
-				c.sugar.Errorw("fallback also failed for stream", "error", fbErr)
-				errData, _ := json.Marshal("ai_service_unavailable")
-				ch <- StreamEvent{Type: EventToken, Data: errData}
-				return
-			}
-		}
-
-		if !geminiFailed && fullText.Len() == 0 {
+		if fullText.Len() == 0 {
 			return
 		}
 

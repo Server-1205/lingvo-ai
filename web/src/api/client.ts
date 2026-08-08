@@ -1,4 +1,5 @@
 import { initData } from '@telegram-apps/sdk';
+import { debug } from '../lib/debug';
 
 const BASE = import.meta.env.VITE_API_URL || '';
 
@@ -172,7 +173,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     headers['X-Telegram-Init-Data'] = initDataRaw;
   }
 
-  console.debug(`[api] ${options?.method || 'GET'} ${path}`);
+  debug(`[api] ${options?.method || 'GET'} ${path}`);
 
   const res = await fetch(`${BASE}${path}`, {
     ...options,
@@ -181,7 +182,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    console.debug(`[api] ${options?.method || 'GET'} ${path} → ${res.status}`, data);
+    debug(`[api] ${options?.method || 'GET'} ${path} → ${res.status}`, data);
     throw new ApiError(
       (data as Record<string, unknown>)?.message as string || (data as Record<string, unknown>)?.error as string || 'Unknown error',
       res.status,
@@ -190,7 +191,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   const data = await res.json() as T;
-  console.debug(`[api] ${options?.method || 'GET'} ${path} → ${res.status}`, data);
+  debug(`[api] ${options?.method || 'GET'} ${path} → ${res.status}`, data);
   return data;
 }
 
@@ -292,7 +293,7 @@ export async function chatStream(
     headers['X-Telegram-Init-Data'] = initDataRaw;
   }
 
-  console.debug('[api] POST /api/chat/stream');
+  debug('[api] POST /api/chat/stream');
 
   const res = await fetch(`${BASE}/api/chat/stream`, {
     method: 'POST',
@@ -335,11 +336,11 @@ export async function chatStream(
       try {
         evt = JSON.parse(jsonStr) as SSEEvent;
       } catch {
-        console.debug('[chat/stream] failed to parse:', jsonStr);
+        debug('[chat/stream] failed to parse:', jsonStr);
         continue;
       }
 
-      console.debug('[chat/stream] event:', evt.type, evt.data);
+      debug('[chat/stream] event:', evt.type, evt.data);
 
       switch (evt.type) {
         case 'token':

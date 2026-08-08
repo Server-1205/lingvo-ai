@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LoadingDots } from './LoadingDots';
 import { initData } from '@telegram-apps/sdk';
 
 interface Exercise {
@@ -74,8 +75,8 @@ export function DailyLesson({ onBack }: DailyLessonProps) {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
-        <div style={{ fontSize: 48 }}>📅</div>
+      <div className="placeholder">
+        <LoadingDots size={14} />
         <div style={{ fontSize: 17, color: 'var(--c-on-surface-variant)' }}>{t('common.loading')}</div>
       </div>
     );

@@ -34,6 +34,7 @@ vi.mock('../../hooks/useTelegram', () => ({
 
 vi.mock('../../api/client', () => ({
   chatStream: vi.fn(),
+  getSubscription: vi.fn().mockResolvedValue({ active: false }),
   ApiError: class {
     name = 'ApiError';
     status: number;

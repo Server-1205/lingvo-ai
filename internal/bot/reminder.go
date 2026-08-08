@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,7 +32,7 @@ func reminderText(lang string, count int) string {
 	return msgs["uz"]
 }
 
-func sendReviewWebApp(bot *tgbotapi.BotAPI, chatID int64, lang string, sugar *zap.SugaredLogger) {
+func sendReviewWebApp(bot *tgbotapi.BotAPI, chatID int64, lang string, webappURL string, sugar *zap.SugaredLogger) {
 	texts := map[string]string{
 		"uz": "📚 Eslatma! So'zlaringizni takrorlash vaqti keldi.",
 		"ru": "📚 Напоминание! Пора повторить слова.",
@@ -50,14 +51,21 @@ func sendReviewWebApp(bot *tgbotapi.BotAPI, chatID int64, lang string, sugar *za
 		label = l
 	}
 
-	sendWebAppMessage(chatID, text, label, "https://t.me/lingvo_ai_bot/app?startapp=review", sugar, "")
+	sendWebAppMessage(chatID, text, label, webappURL+"?startapp=review", sugar, "")
 }
 
-func StartReminderScheduler(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger) {
+func StartReminderScheduler(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger, webappURL string) {
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 
 	sugar.Info("reminder scheduler started")
+
+	baseURL := webappURL
+	if !strings.Contains(baseURL, "?") {
+		baseURL += "?startapp=review"
+	} else {
+		baseURL += "&startapp=review"
+	}
 
 	for range ticker.C {
 		sugar.Debug("reminder tick")
@@ -92,7 +100,7 @@ func StartReminderScheduler(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.
 				user.TelegramID,
 				reminderText(lang, dueCount),
 				map[string]string{"uz": "📖 Hozir takrorlash", "ru": "📖 Повторить сейчас"}[lang],
-				"https://t.me/lingvo_ai_bot/app?startapp=review",
+				baseURL,
 				sugar, "Markdown",
 			)
 

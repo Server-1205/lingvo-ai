@@ -138,3 +138,18 @@ a {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
+
+@keyframes lds-bounce {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

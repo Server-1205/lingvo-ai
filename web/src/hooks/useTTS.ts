@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { initData } from '@telegram-apps/sdk';
+import { debug } from '../lib/debug';
 
 export function useTTS() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -47,7 +48,7 @@ export function useTTS() {
     } catch (err) {
       setIsPlaying(false);
       setError((err as Error).message);
-      console.debug('[tts] error:', (err as Error).message);
+      debug('[tts] error:', (err as Error).message);
     }
   }, [isPlaying]);
 

@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { chatStream, ApiError } from '../api/client';
+import { useQuery } from '@tanstack/react-query';
+import { chatStream, getSubscription, ApiError } from '../api/client';
 import type { Correction, PremiumAnalysis, Usage } from '../api/client';
 import { GrammarBlock } from './GrammarBlock';
 import { PremiumCorrectionBlock } from './PremiumCorrectionBlock';
 import { UsageIndicator } from './UsageIndicator';
+import { debug } from '../lib/debug';
 
 interface Message {
   role: 'user' | 'ai';
@@ -23,7 +25,18 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
   const { t, i18n } = useTranslation();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
+  const { data: sub } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: getSubscription,
+    retry: false,
+    staleTime: 30_000,
+  });
   const [usage, setUsage] = useState<Usage>({ daily_used: 0, daily_limit: 10, is_premium: false });
+  useEffect(() => {
+    if (sub?.active) {
+      setUsage(prev => ({ ...prev, is_premium: true }));
+    }
+  }, [sub?.active]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -78,7 +91,7 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
     const text = input.trim();
     if (!text || isStreaming) return;
 
-    console.debug('[chat] sending...', text);
+    debug('[chat] sending...', text);
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text }]);
 
@@ -109,7 +122,7 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
         },
         (newUsage) => {
           setUsage(newUsage);
-          console.debug('[chat] premium path:', newUsage.is_premium);
+          debug('[chat] premium path:', newUsage.is_premium);
         },
         () => {
           setIsStreaming(false);
@@ -122,11 +135,11 @@ export function Chat({ onUpgrade, onStartReview, onStartLevelTest }: ChatProps) 
             }
             return next;
           });
-          console.debug('[chat] premium analysis received', analysis);
+          debug('[chat] premium analysis received', analysis);
         },
       );
     } catch (err) {
-      console.debug('[FIX] chat error', (err as Error).message);
+      debug('[FIX] chat error', (err as Error).message);
       if (err instanceof ApiError && err.status === 429) {
         const errData = err.data as Record<string, unknown>;
         if (errData.daily_used !== undefined && errData.daily_limit !== undefined) {

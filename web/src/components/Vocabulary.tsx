@@ -6,6 +6,8 @@ import { getVocab, addVocab, deleteVocab, getDueWords, submitReview, getSubscrip
 import type { VocabWord } from '../api/client';
 import { ReviewCard } from './ReviewCard';
 import { useTTS } from '../hooks/useTTS';
+import { debug } from '../lib/debug';
+import { LoadingDots } from './LoadingDots';
 import { ApiError } from '../api/client';
 
 interface VocabularyProps {
@@ -113,7 +115,7 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
                   a.click();
                   URL.revokeObjectURL(a.href);
                 })
-                .catch(err => console.debug('[vocab] export error', err));
+                .catch(err => debug('[vocab] export error', err));
             }}
           >
             {t('premium.export_vocab')}
@@ -154,7 +156,7 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
         <>
           {isLoading && (
             <div className="placeholder">
-              <div className="placeholder-icon">⏳</div>
+              <LoadingDots size={14} />
               <div>{t('common.loading')}</div>
             </div>
           )}
@@ -305,7 +307,7 @@ export function Vocabulary({ initialTab }: VocabularyProps) {
 
           {addMutation.isPending && (
             <div className="placeholder">
-              <div className="placeholder-icon">⏳</div>
+              <LoadingDots size={14} />
               <div>{t('common.loading')}</div>
             </div>
           )}

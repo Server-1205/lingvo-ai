@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -14,10 +15,13 @@ import (
 	"github.com/lingvo-ai/lingvo/internal/db"
 )
 
-var durationMap = map[string]string{
-	"weekly":  "+7 days",
-	"monthly": "+30 days",
-}
+var (
+	durationMap = map[string]string{
+		"weekly":  "+7 days",
+		"monthly": "+30 days",
+	}
+	processedPayments sync.Map
+)
 
 func handlePayment(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLogger, update tgbotapi.Update, adminIDs []int64) {
 	if update.Message == nil || update.Message.SuccessfulPayment == nil {
@@ -26,11 +30,17 @@ func handlePayment(bot *tgbotapi.BotAPI, database *sqlx.DB, sugar *zap.SugaredLo
 
 	payment := update.Message.SuccessfulPayment
 	payload := payment.InvoicePayload
+	chargeID := payment.TelegramPaymentChargeID
 	starsAmount := payment.TotalAmount
 	chatID := update.Message.Chat.ID
 	telegramID := update.Message.From.ID
 
-	sugar.Infow("successful payment", "telegram_id", telegramID, "payload", payload, "stars", starsAmount)
+	if _, loaded := processedPayments.LoadOrStore(chargeID, true); loaded {
+		sugar.Warnw("duplicate payment ignored", "charge_id", chargeID, "telegram_id", telegramID)
+		return
+	}
+
+	sugar.Infow("successful payment", "telegram_id", telegramID, "payload", payload, "stars", starsAmount, "charge_id", chargeID)
 
 	parts := strings.SplitN(payload, "_", 2)
 	if len(parts) != 2 {

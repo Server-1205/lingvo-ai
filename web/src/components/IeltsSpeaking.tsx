@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LoadingDots } from './LoadingDots';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { getIeltsSpeakingQuestions, submitIeltsSpeaking } from '../api/client';
 import type { IeltsSpeakingResponse } from '../api/client';
@@ -49,7 +50,7 @@ export function IeltsSpeaking({ onBack }: IeltsSpeakingProps) {
     return (
       <div className="scroll-area" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
         <div className="placeholder">
-          <div className="placeholder-icon">⏳</div>
+          <LoadingDots size={14} />
           <div>{t('common.loading')}</div>
         </div>
       </div>

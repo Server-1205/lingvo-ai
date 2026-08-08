@@ -1,6 +1,19 @@
 package ai
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
+
+const maxInputLen = 2000
+
+func sanitizeInput(s string) string {
+	s = strings.TrimSpace(s)
+	if len(s) > maxInputLen {
+		s = s[:maxInputLen]
+	}
+	return s
+}
 
 func langFullName(code string) string {
 	switch code {
@@ -23,6 +36,7 @@ func BuildChatPrompt(level, lang, text string) string {
 	if instr == "" {
 		instr = "Reply naturally in English, keeping your response concise (2-4 sentences)."
 	}
+	text = sanitizeInput(text)
 	return fmt.Sprintf(`You are an AI English tutor. The user's English level is %s.
 
 %s
@@ -47,7 +61,9 @@ Rules:
 5. If no mistakes, return "corrections": [].
 6. corrections array must be empty or contain 1-3 items max.
 
-User message: %s`, level, instr, langFullName(lang), text)
+--- USER INPUT ---
+%s
+--- END USER INPUT ---`, level, instr, langFullName(lang), text)
 }
 
 func BuildGrammarCheckPrompt(level, lang, text string) string {
@@ -55,6 +71,7 @@ func BuildGrammarCheckPrompt(level, lang, text string) string {
 	if instr == "" {
 		instr = "Explain in English."
 	}
+	text = sanitizeInput(text)
 	return fmt.Sprintf(`Check this text for grammar errors. User level: %s.
 
 %s
@@ -78,7 +95,9 @@ Rules:
   ]
 }
 
-Text: %s`, level, instr, text)
+--- USER INPUT ---
+%s
+--- END USER INPUT ---`, level, instr, text)
 }
 
 func BuildPremiumChatPrompt(level, lang, text string) string {
@@ -86,6 +105,7 @@ func BuildPremiumChatPrompt(level, lang, text string) string {
 	if instr == "" {
 		instr = "Reply naturally in English, keeping your response concise (2-4 sentences)."
 	}
+	text = sanitizeInput(text)
 	return fmt.Sprintf(`You are an AI English tutor. The user's English level is %s.
 
 %s
@@ -123,10 +143,13 @@ Rules:
 6. premium_analysis must be specific to the user's message, not generic.
 7. areas_for_improvement should list 2-3 concrete points from the message.
 
-User message: %s`, level, instr, langFullName(lang), text)
+--- USER INPUT ---
+%s
+--- END USER INPUT ---`, level, instr, langFullName(lang), text)
 }
 
 func BuildVocabPrompt(lang, word string) string {
+	word = sanitizeInput(word)
 	return fmt.Sprintf(`You are a bilingual English-Uzbek/Russian dictionary. The user enters a word in any language (English, Uzbek, or Russian). You must detect the language, find the English word, and return translations to both Uzbek and Russian.
 
 Rules:
@@ -144,7 +167,10 @@ Rules:
   "level": "a1|a2|b1|b2|c1"
 }
 
-Input: %s. User language: %s`, word, lang)
+--- USER INPUT ---
+%s
+--- END USER INPUT ---
+User language: %s`, word, lang)
 }
 
 func BuildQuizPrompt(topic string, count int, lang string) string {
@@ -244,6 +270,7 @@ func BuildPremiumChatPromptWithHistory(level, lang, text string, recentErrors []
 	if instr == "" {
 		instr = "Reply naturally in English, keeping your response concise (2-4 sentences)."
 	}
+	text = sanitizeInput(text)
 
 	historySection := ""
 	if len(recentErrors) > 0 {
@@ -292,10 +319,13 @@ Rules:
 6. premium_analysis must be specific to the user's message, not generic.
 7. areas_for_improvement should list 2-3 concrete points from the message.
 
-User message: %s`, level, instr, historySection, langFullName(lang), text)
+--- USER INPUT ---
+%s
+--- END USER INPUT ---`, level, instr, historySection, langFullName(lang), text)
 }
 
 func BuildIeltsWritingPrompt(taskType, lang, userText, taskDescription string) string {
+	userText = sanitizeInput(userText)
 	format := "report describing a chart/graph/data"
 	if taskType == "task2" {
 		format = "essay discussing a topic"
@@ -304,7 +334,9 @@ func BuildIeltsWritingPrompt(taskType, lang, userText, taskDescription string) s
 
 Task: %s
 
-User's response: %s
+--- USER INPUT ---
+%s
+--- END USER INPUT ---
 
 Rules:
 1. Score honestly based on official IELTS band descriptors. Do not inflate scores.
@@ -359,11 +391,14 @@ Explain exam instructions in %s.`, partDesc, part, langFullName(lang))
 }
 
 func BuildIeltsSpeakingEvaluatePrompt(part int, lang, question, userResponse string) string {
+	userResponse = sanitizeInput(userResponse)
 	return fmt.Sprintf(`You are an IELTS Speaking examiner. Evaluate this candidate's response for Part %d.
 
 Question: %s
 
-Candidate's response: %s
+--- USER INPUT ---
+%s
+--- END USER INPUT ---
 
 Rules:
 1. Score honestly based on official IELTS speaking criteria.
@@ -417,13 +452,16 @@ Explain instructions in %s.`, langFullName(lang))
 }
 
 func BuildIeltsReadingEvaluatePrompt(lang, passage string, questionsJSON string, userAnswersJSON string) string {
+	userAnswersJSON = sanitizeInput(userAnswersJSON)
 	return fmt.Sprintf(`You are an IELTS Reading examiner. Check these answers against the passage.
 
 Passage: %s
 
 Questions: %s
 
-User's answers (indices): %s
+--- USER INPUT ---
+%s
+--- END USER INPUT ---
 
 Rules:
 1. Score based strictly on the passage content. Do not use outside knowledge.

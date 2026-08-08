@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { initData, themeParams } from '@telegram-apps/sdk';
+import { debug } from '../lib/debug';
 
 export interface TelegramContext {
   user: { id: number; first_name: string } | null;
@@ -17,7 +18,7 @@ export function useTelegram(): TelegramContext {
         setTheme(themeParams.state() as Record<string, string>);
       });
     } catch {
-      console.debug('[tg] themeParams.mount() not available');
+      debug('[tg] themeParams.mount() not available');
     }
   }, []);
 

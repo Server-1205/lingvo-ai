@@ -1,6 +1,8 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getSubscription, createInvoice } from '../api/client';
+import { LoadingDots } from './LoadingDots';
+import { debug } from '../lib/debug';
 
 const checkIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 const crossIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
@@ -16,7 +18,7 @@ export function SubscriptionPlans() {
   const invoiceMutation = useMutation({
     mutationFn: (plan: string) => createInvoice({ plan }),
     onSuccess: (data) => {
-      console.debug('[subscription] invoice created', data);
+      debug('[subscription] invoice created', data);
       window.open(data.invoice_link, '_blank');
     },
   });
@@ -31,6 +33,8 @@ export function SubscriptionPlans() {
         { text: t('subscription.feature_basic_corrections'), included: true },
         { text: t('subscription.feature_unlimited'), included: false },
         { text: t('subscription.feature_priority'), included: false },
+        { text: t('subscription.feature_ielts'), included: false },
+        { text: t('subscription.feature_errors'), included: false },
         { text: t('subscription.feature_export'), included: false },
       ],
     },
@@ -42,6 +46,8 @@ export function SubscriptionPlans() {
         { text: t('subscription.feature_unlimited'), included: true },
         { text: t('subscription.feature_priority'), included: true },
         { text: t('subscription.feature_basic_corrections'), included: true },
+        { text: t('subscription.feature_ielts'), included: true },
+        { text: t('subscription.feature_errors'), included: false },
         { text: t('subscription.feature_export'), included: false },
       ],
     },
@@ -53,6 +59,8 @@ export function SubscriptionPlans() {
         { text: t('subscription.feature_unlimited'), included: true },
         { text: t('subscription.feature_priority'), included: true },
         { text: t('subscription.feature_basic_corrections'), included: true },
+        { text: t('subscription.feature_ielts'), included: true },
+        { text: t('subscription.feature_errors'), included: true },
         { text: t('subscription.feature_export'), included: true },
       ],
     },
@@ -64,7 +72,7 @@ export function SubscriptionPlans() {
 
       {isLoading && (
         <div className="placeholder">
-          <div className="placeholder-icon">⏳</div>
+          <LoadingDots size={14} />
           <div>{t('common.loading')}</div>
         </div>
       )}

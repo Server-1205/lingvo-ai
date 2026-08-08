@@ -9,17 +9,19 @@
 
 ## Состояние проекта
 
-- **Стадия**: Core — Backend API + middleware работают
-- **Backend**: Go-сервер компилируется, 20 эндпоинтов (+6 IELTS: writing, speaking generate/evaluate, reading generate/evaluate, scores)
-- **Middleware**: Auth (HMAC-SHA256 initData), Ratelimit (10/day free, unlimited premium)
-- **Frontend**: UI написан (Chat, NavBar, Subscription, Vocabulary, Progress, LevelTest, ReviewCard, IeltsDashboard, IeltsWriting, IeltsSpeaking, IeltsReading) — React 19, Vite 8, TS 6
-- **Бот**: Long-polling работает (/start, /help, /daily, /stats, successful_payment)
-- **AI**: Gemini-клиент + SM-2 алгоритм (sm2.go, prompts.go, response.go), Streaming через SSE (chat_stream.go)
-- **БД**: Схема готова (6 таблиц: users, messages, subscriptions, vocabulary, daily_progress, ielts_scores + SM-2 колонки), миграция работает, CRUD готов (users, messages, subscriptions, vocabulary, progress, ielts)
-- **i18n**: Frontend uz.json + ru.json (95+ ключей, включая ielts.*), Backend uz.json + ru.json (7 ключей)
-- **SM-2 Spaced Repetition**: ✅ Полностью реализован (алгоритм + API + UI + тесты)
-- **IELTS Full Prep Bundle**: ✅ Writing (Task 1/2), Speaking (Part 1-3), Reading, Band Score tracking, premium-gated (все 6 эндпоинтов + 4 UI компонента + Go/Vitest тесты)
-- **AI Fallback**: ✅ DeepSeek fallback работает — оба эндпоинта (/api/chat и /api/chat/stream) успешно фолбекятся при 429 Gemini
+- **Стадия**: Core — Backend API + middleware работают  
+- **Backend**: Go-сервер компилируется, 26 эндпоинтов (чат, грамматика, словарь, прогресс, подписка, платёж, ошибки, IELTS, TTS, daily)  
+- **Middleware**: Auth (HMAC-SHA256 initData), Ratelimit (10/day free, unlimited premium)  
+- **Frontend**: UI написан (Chat, NavBar, Subscription, Vocabulary, Progress, LevelTest, ReviewCard, IeltsDashboard, IeltsWriting, IeltsSpeaking, IeltsReading, Onboarding, ErrorDashboard, DailyLesson) — React 19, Vite 8, TS 6  
+- **Бот**: Long-polling работает (/start, /help, /daily, /stats, successful_payment), напоминания через StartReminderScheduler  
+- **AI**: DeepSeek-chat (основной) + Gemini 2.0 Flash (фолбек) + SM-2 алгоритм, Streaming через SSE  
+- **Security**: sanitizeInput() во всех промптах, дедупликация платежей (sync.Map), продление expires_at  
+- **БД**: Схема готова (7 таблиц: users, messages, subscriptions, vocabulary, daily_progress, error_history, ielts_scores + SM-2 колонки), миграция работает  
+- **i18n**: Frontend uz.json + ru.json (100+ ключей, включая ielts.*, onboarding.*, daily.*, errors.*, premium.*, subscription.feature_*)  
+- **SM-2 Spaced Repetition**: ✅ Полностью реализован  
+- **IELTS Full Prep Bundle**: ✅ Writing (Task 1/2), Speaking (Part 1-3), Reading, Band Score tracking, premium-gated  
+- **AI Provider**: ✅ DeepSeek-chat основной, Gemini фолбек — оба эндпоинта (/api/chat и /api/chat/stream)  
+- **Dev**: ✅ debug() хелпер вместо console.debug, LoadingDots/Spinner/Screen, cloudflared tunnel
 
 ## Текущий фокус
 
@@ -94,3 +96,24 @@
 - Memory MCP добавлен в `.opencode/opencode.json` ✅
 - Memory файл инициализирован ✅
 - Контекст обновлён ✅
+
+## Сессия 2026-06-09 — Cloudflared tunnel, DeepSeek primary, Security fixes, i18n, console.debug cleanup
+
+### Что сделано
+1. **Cloudflared tunnel**: Запущен туннель для тестирования Mini App, обновлён WEBAPP_URL
+2. **Спинеры загрузки**: Созданы LoadingDots, LoadingSpinner, LoadingScreen — заменены все ⏳-плейсхолдеры
+3. **DeepSeek как основной AI**: OpenAI-клиент — основной провайдер, Gemini — фолбек (openai.go: GenerateStream + SSE). `ChatStream()` через OpenAI первым
+4. **i18n подписки**: Добавлены `feature_*` ключи (feature_messages, feature_basic_corrections, feature_unlimited, feature_priority, feature_ielts, feature_errors, feature_export, best_value) + `chat.unlimited` в uz.json/ru.json. Subscription.tsx обновлён
+5. **DEV_MODE auth**: парсится реальный tgUser.ID из initData вместо mockTGID для всех
+6. **Reminder scheduler**: StartReminderScheduler принимает webappURL, bot.go передаёт
+7. **Security — prompt injection**: sanitizeInput() + разделители --- USER INPUT --- во всех промптах
+8. **Security — race condition payments**: SaveSubscription продлевает expires_at, processedPayments sync.Map для дедупликации
+9. **console.debug → debug()**: Создан web/src/lib/debug.ts, заменены 28 вызовов в 11 файлах
+
+### Результаты
+- `go build ./...` ✅
+- `go test ./...` — 14 тестов ✅ (ai, api, bot, db, tts)
+- `npm run build` ✅ (предупреждение chunk size — не критично)
+- `npx vitest run` — 7 файлов, 19 тестов ✅
+- Cloudflared tunnel работает ✅
+- DeepSeek как основной провайдер ✅

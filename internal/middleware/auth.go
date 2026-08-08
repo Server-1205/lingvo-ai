@@ -27,19 +27,37 @@ func AuthMiddleware(botToken string, database *sqlx.DB, devMode bool) gin.Handle
 	return func(c *gin.Context) {
 		if devMode {
 			log.Printf("[auth] DEV_MODE active, bypassing auth for %s", c.ClientIP())
-			mockTGID := int64(12345)
-			if err := db.UpsertUser(c.Request.Context(), database, mockTGID, "Dev", "uz"); err != nil {
+			tgID := int64(706963808)
+			lang := "uz"
+			username := "Dev"
+
+			if initData := c.GetHeader("X-Telegram-Init-Data"); initData != "" {
+				if values, err := url.ParseQuery(initData); err == nil {
+					if userStr := values.Get("user"); userStr != "" {
+						var tgUser telegramUser
+						if err := json.Unmarshal([]byte(userStr), &tgUser); err == nil && tgUser.ID != 0 {
+							tgID = tgUser.ID
+							username = tgUser.Username
+							if tgUser.LanguageCode == "uz" || tgUser.LanguageCode == "ru" {
+								lang = tgUser.LanguageCode
+							}
+						}
+					}
+				}
+			}
+
+			if err := db.UpsertUser(c.Request.Context(), database, tgID, username, lang); err != nil {
 				c.AbortWithStatusJSON(500, gin.H{"error": "internal_error"})
 				return
 			}
-			user, err := db.GetUserByTelegramID(c.Request.Context(), database, mockTGID)
+			user, err := db.GetUserByTelegramID(c.Request.Context(), database, tgID)
 			if err != nil {
 				c.AbortWithStatusJSON(500, gin.H{"error": "internal_error"})
 				return
 			}
-			c.Set("telegram_id", mockTGID)
+			c.Set("telegram_id", tgID)
 			c.Set("user_id", user.ID)
-			c.Set("lang", "uz")
+			c.Set("lang", user.Lang)
 			c.Set("level", user.Level)
 			c.Next()
 			return

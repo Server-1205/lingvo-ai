@@ -1,6 +1,7 @@
 import { useState, useDebugValue } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import type { DailyProgressEntry } from '../api/client';
+import { debug } from '../lib/debug';
 
 interface ProgressChartProps {
   data: DailyProgressEntry[];
@@ -46,13 +47,13 @@ export function ProgressChart({ data = [], onPeriodChange }: ProgressChartProps)
     ? `chart: ${data.length} points, ${data[0].date} - ${data[data.length-1].date}`
     : 'chart: empty');
 
-  console.debug('[progress-chart] rendering with', data.length, 'data points');
+  debug('[progress-chart] rendering with', data.length, 'data points');
   if (data.length > 0) {
-    console.debug('[progress-chart] date range:', data[0].date, '-', data[data.length - 1].date);
+    debug('[progress-chart] date range:', data[0].date, '-', data[data.length - 1].date);
   }
 
   const handlePeriodChange = (days: number) => {
-    console.debug('[progress-chart] period change:', period, '->', days);
+    debug('[progress-chart] period change:', period, '->', days);
     setPeriod(days);
     onPeriodChange?.(days);
   };

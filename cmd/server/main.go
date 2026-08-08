@@ -88,7 +88,7 @@ func main() {
 
 	// Init AI client
 	var aiClient *ai.Client
-	if geminiKey != "" {
+	if geminiKey != "" || openAIKey != "" {
 		var err error
 		aiClient, err = ai.NewClient(context.Background(), geminiKey, openAIKey, openAIBaseURL, openAIModel, sugar)
 		if err != nil {
@@ -101,7 +101,7 @@ func main() {
 			}
 		}
 	} else {
-		sugar.Warn("GEMINI_API_KEY not set, AI features disabled")
+		sugar.Warn("no AI provider configured (set GEMINI_API_KEY or OPENAI_API_KEY)")
 	}
 
 	// Init router
